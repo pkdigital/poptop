@@ -3,6 +3,7 @@ import Base from "../../layouts/Base.astro";
 import { getPlace } from "../../lib/places.mjs";
 import { getFeedback, getApprovedReviews } from "../../lib/engagement.mjs";
 import { getOrFetchGeo } from "../../lib/geo.mjs";
+import { getOrFetchOg } from "../../lib/ogimage.mjs";
 import { kindLabel, facilityBadges } from "../../lib/format.mjs";
 import Icon from "../../components/Icon.astro";
 
@@ -38,6 +39,12 @@ const phone = tags.phone || tags["contact:phone"];
 const openingHours = tags.opening_hours;
 const operator = tags.operator;
 const badges = facilityBadges(place);
+
+// Website preview image (cached, validated). Priority: og:image -> Mapillary.
+const ogImg = website ? await getOrFetchOg(env.DB, ref, website) : null;
+const streetview = `/api/streetview?lat=${place.lat}&lng=${place.lng}`;
+const heroPrimary = ogImg || streetview;
+const heroFb = ogImg ? streetview : "";
 
 const directions = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
 const osmLink = source === "osm" ? `https://www.openstreetmap.org/${id}` : null;
@@ -106,7 +113,8 @@ const jsonLd = {
   </Fragment>
 
   <div class="wrap detail">
-    <img class="hero-img" alt={name} src={`/api/streetview?lat=${place.lat}&lng=${place.lng}`} onerror="this.remove()" />
+    <img class="hero-img" alt={name} src={heroPrimary} data-fb={heroFb}
+      onerror="var fb=this.dataset.fb; if(fb){this.removeAttribute('data-fb');this.src=fb;} else {this.remove();}" />
     <p class="crumbs"><a href="/">Map</a> › {name}</p>
     <h1>{name}</h1>
     <p class="kind">

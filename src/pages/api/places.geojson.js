@@ -12,6 +12,12 @@ export async function GET({ locals }) {
 
   const STOPOVER = new Set(["caravan_site", "camp_site", "aire", "pub", "driveway", "site", "other"]);
 
+  // Cached website preview images, keyed by "source/id".
+  const og = await locals.runtime.env.DB.prepare(
+    `SELECT place_ref, og_image FROM place_geo WHERE og_image IS NOT NULL`
+  ).all();
+  const ogMap = new Map(og.results.map((r) => [r.place_ref, r.og_image]));
+
   const toFeature = (p, flags) => ({
     type: "Feature",
     geometry: { type: "Point", coordinates: [p.lng, p.lat] },
@@ -24,6 +30,7 @@ export async function GET({ locals }) {
       kindLabel: kindLabel(p.kind),
       source: p.source,
       stopover: STOPOVER.has(p.kind) ? 1 : 0,
+      img: ogMap.get(`${p.source}/${p.id}`) || null,
       ...flags,
     },
   });

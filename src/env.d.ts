@@ -7,6 +7,7 @@ type Env = {
   DB: any; // D1Database
   W3W_API_KEY?: string;
   MAPILLARY_TOKEN?: string;
+  ADMIN_TOKEN?: string;
   AI?: any; // Workers AI binding (for moderation, later)
 };
 
