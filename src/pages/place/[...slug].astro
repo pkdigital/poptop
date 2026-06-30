@@ -4,7 +4,7 @@ import { getPlace } from "../../lib/places.mjs";
 import { getFeedback, getApprovedReviews } from "../../lib/engagement.mjs";
 import { getOrFetchGeo } from "../../lib/geo.mjs";
 import { getOrFetchOg } from "../../lib/ogimage.mjs";
-import { kindLabel, facilityBadges } from "../../lib/format.mjs";
+import { kindLabel, facilityBadges, kindVisual } from "../../lib/format.mjs";
 import Icon from "../../components/Icon.astro";
 
 export const prerender = false;
@@ -45,9 +45,18 @@ const og = website ? await getOrFetchOg(env.DB, ref, website) : null;
 const ogImg = og?.image || null;
 const ai = await env.DB.prepare("SELECT ai_desc FROM place_geo WHERE place_ref = ?").bind(ref).first();
 const aboutText = place.description || ai?.ai_desc || og?.desc || null;
-const streetview = `/api/streetview?lat=${place.lat}&lng=${place.lng}`;
-const heroPrimary = ogImg || streetview;
-const heroFb = ogImg ? streetview : "";
+
+// Community photos (approved), newest first.
+const photos = (await env.DB.prepare(
+  "SELECT key FROM place_photos WHERE place_ref = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 10"
+).bind(ref).all()).results;
+const communityPhoto = photos[0] ? `/api/photo/${photos[0].key}` : null;
+
+// Image priority: community photo -> website og:image -> (none -> no hero).
+const candidates = [communityPhoto, ogImg].filter(Boolean);
+const heroPrimary = candidates[0] || null;
+const heroFb = candidates[1] || "";
+const tile = kindVisual(place.kind, source); // themed fallback when no photo
 
 const directions = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
 const osmLink = source === "osm" ? `https://www.openstreetmap.org/${id}` : null;
@@ -80,7 +89,9 @@ const jsonLd = {
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <style>
       .detail { padding: 1.5rem 0 1rem; }
-      .hero-img { width: 100%; height: clamp(180px, 32vw, 300px); object-fit: cover; border-radius: var(--r-lg); border: 1px solid var(--line); margin-bottom: 1.1rem; box-shadow: var(--shadow-sm); }
+      .hero-media { position: relative; width: 100%; height: clamp(180px, 32vw, 300px); border-radius: var(--r-lg);
+        overflow: hidden; margin-bottom: 1.1rem; display: grid; place-items: center; color: #fff; box-shadow: var(--shadow-sm); }
+      .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
       .crumbs { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.6rem; }
       .detail h1 { margin: 0 0 0.3rem; }
       .detail h2 { margin: 2rem 0 0.7rem; }
@@ -88,6 +99,7 @@ const jsonLd = {
       .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.85rem 0; }
       #pmap { height: 300px; border-radius: var(--r-lg); border: 1px solid var(--line); box-shadow: var(--shadow); margin: 1.25rem 0; }
       .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 1rem 0 0.5rem; }
+      .add-photo { min-height: 1.2rem; margin: 0 0 0.5rem; font-size: 0.9rem; }
       .facts-card { padding: 1.1rem 1.25rem; }
       .facts { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.55rem; }
       .facts li { display: flex; gap: 0.6rem; flex-wrap: wrap; }
@@ -116,8 +128,13 @@ const jsonLd = {
   </Fragment>
 
   <div class="wrap detail">
-    <img class="hero-img" alt={name} src={heroPrimary} data-fb={heroFb}
-      onerror="var fb=this.dataset.fb; if(fb){this.removeAttribute('data-fb');this.src=fb;} else {this.remove();}" />
+    <div class="hero-media" style={`background:linear-gradient(135deg, ${tile.color}, ${tile.color}cc)`}>
+      <Icon name={tile.icon} size="3.2rem" />
+      {heroPrimary && (
+        <img class="hero-img" alt={name} src={heroPrimary} data-fb={heroFb}
+          onerror="var fb=this.dataset.fb; if(fb){this.removeAttribute('data-fb');this.src=fb;} else {this.remove();}" />
+      )}
+    </div>
     <p class="crumbs"><a href="/">Map</a> › {name}</p>
     <h1>{name}</h1>
     <p class="kind">
@@ -134,6 +151,11 @@ const jsonLd = {
     <div class="actions">
       <a class="btn" href={directions} rel="nofollow" target="_blank"><Icon name="navigation" size="1rem" /> Get directions</a>
       {website && <a class="btn-ghost btn" href={website} rel="nofollow" target="_blank">Website</a>}
+      <button class="btn-ghost btn" id="photo-btn" type="button"><Icon name="plus" size="1rem" /> Add a photo</button>
+    </div>
+    <div class="add-photo" id="add-photo" data-ref={ref}>
+      <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" hidden />
+      <span class="photo-msg muted" id="photo-msg"></span>
     </div>
 
     <h2>Is this still here and correct?</h2>
@@ -273,6 +295,28 @@ const jsonLd = {
       } catch {
         msg.textContent = "Sorry, something went wrong. Please try again.";
       }
+    });
+
+    // Photo upload
+    const addPhoto = document.getElementById("add-photo");
+    const photoFile = document.getElementById("photo-file");
+    const photoBtn = document.getElementById("photo-btn");
+    const photoMsg = document.getElementById("photo-msg");
+    photoBtn.addEventListener("click", () => photoFile.click());
+    photoFile.addEventListener("change", async () => {
+      const f = photoFile.files && photoFile.files[0];
+      if (!f) return;
+      if (f.size > 8 * 1024 * 1024) { photoMsg.textContent = "Max image size is 8 MB."; return; }
+      photoMsg.textContent = "Uploading…"; photoBtn.disabled = true;
+      const fd = new FormData();
+      fd.append("ref", addPhoto.dataset.ref);
+      fd.append("file", f);
+      try {
+        const res = await fetch("/api/photos", { method: "POST", body: fd });
+        const d = await res.json();
+        if (res.ok && d.ok) { photoMsg.textContent = "Thanks!"; location.reload(); }
+        else { photoMsg.textContent = d.error || "Upload failed."; photoBtn.disabled = false; }
+      } catch { photoMsg.textContent = "Network error."; photoBtn.disabled = false; }
     });
   </script>
 </Base>

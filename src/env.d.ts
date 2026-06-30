@@ -10,6 +10,7 @@ type Env = {
   ANTHROPIC_API_KEY?: string;
   ADMIN_TOKEN?: string;
   AI?: any; // Workers AI binding (for moderation, later)
+  PHOTOS?: any; // R2 bucket for community photo uploads
   // Better Auth (src/lib/auth.ts) — set as wrangler secrets in prod.
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;

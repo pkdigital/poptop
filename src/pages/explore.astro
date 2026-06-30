@@ -147,15 +147,13 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
       if (p.toilets) b.push(icons.toilet + " Toilets");
       return b;
     };
-    const sv = (lat, lng) => `/api/streetview?lat=${lat}&lng=${lng}`;
-    // Image priority: website og:image -> Mapillary -> (remove -> gradient tile).
-    const imgTag = (p, lat, lng) => {
-      const primary = p.img || sv(lat, lng);
-      const fb = p.img ? sv(lat, lng) : "";
-      return `<img class="thumb-img" loading="lazy" alt="" src="${primary}" data-fb="${fb}" ` +
-        `onload="this.style.opacity=1;var s=this.nextElementSibling;if(s)s.remove()" ` +
-        `onerror="var fb=this.dataset.fb; if(fb){this.removeAttribute('data-fb');this.src=fb;} else {var s=this.nextElementSibling;if(s)s.remove();this.remove();}">`;
-    };
+    // Image: website og:image only (else the themed gradient tile shows).
+    const imgTag = (p) =>
+      p.img
+        ? `<img class="thumb-img" loading="lazy" alt="" src="${p.img}" ` +
+          `onload="this.style.opacity=1;var s=this.nextElementSibling;if(s)s.remove()" ` +
+          `onerror="var s=this.nextElementSibling;if(s)s.remove();this.remove()">`
+        : "";
     const miles = (aLat, aLng, bLat, bLng) => {
       const R = 3958.8, dLat = (bLat - aLat) * Math.PI / 180, dLng = (bLng - aLng) * Math.PI / 180;
       const la1 = aLat * Math.PI / 180, la2 = bLat * Math.PI / 180;
@@ -244,7 +242,7 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
         const badges = badgesFor(p).map((x) => `<span class="pill">${x}</span>`).join("");
         a.innerHTML =
           `<div class="thumb" style="background:linear-gradient(135deg, ${v.c}, ${v.c}cc)">${v.ic}` +
-          imgTag(p, clat, clng) + `<span class="skeleton"></span></div>` +
+          (p.img ? imgTag(p) + `<span class="skeleton"></span>` : ``) + `</div>` +
           `<div class="body"><h3>${p.label}</h3>` +
           `<p class="meta">${p.kindLabel}${p.source === "community" ? " · Community" : ""} · ${f._d.toFixed(1)} mi</p>` +
           (badges ? `<div class="badges">${badges}</div>` : ``) +
@@ -307,7 +305,7 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
           `<div class="pp"><button class="pp-close" type="button" aria-label="Close">×</button>` +
           `<a class="pcard" href="/place/${p.source}/${p.id}">` +
           `<div class="thumb" style="background:linear-gradient(135deg, ${v.c}, ${v.c}cc)">${v.ic}` +
-          imgTag(p, lat, lng) + `<span class="skeleton"></span></div>` +
+          (p.img ? imgTag(p) + `<span class="skeleton"></span>` : ``) + `</div>` +
           `<div class="body"><h3>${p.label}</h3>` +
           `<p class="meta">${p.kindLabel}${p.source === "community" ? " · Community" : ""} · ${dist} mi</p>` +
           (badges ? `<div class="badges">${badges}</div>` : ``) +

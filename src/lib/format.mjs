@@ -18,6 +18,18 @@ export const KIND_LABELS = {
 
 export const kindLabel = (k) => KIND_LABELS[k] || "Stopover";
 
+// Themed tile colour + icon name (icons.mjs key) per category — used wherever a
+// place has no photo. Matches the map marker colours.
+export function kindVisual(kind, source) {
+  if (source === "community") return { color: "#ff385c", icon: kind === "pub" ? "beer" : "house" };
+  if (kind === "drinking_water" || kind === "water_point") return { color: "#0ea5e9", icon: "droplet" };
+  if (kind === "dump_station") return { color: "#f97316", icon: "recycle" };
+  if (kind === "toilets") return { color: "#0891b2", icon: "toilet" };
+  if (kind === "lpg") return { color: "#7c3aed", icon: "zap" };
+  if (kind === "motorhome_parking") return { color: "#16a34a", icon: "caravan" };
+  return { color: "#16a34a", icon: "tent" };
+}
+
 // Rough straight-line distance for sorting/labelling (miles). Fine at town scale.
 export function distanceMiles(aLat, aLng, bLat, bLng) {
   const R = 3958.8;

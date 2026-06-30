@@ -12,6 +12,9 @@
   // Workers AI — submission moderation (usage-billed, small free daily allowance).
   "ai": { "binding": "AI" },
 
+  // Community photo uploads (enable R2 in the dashboard before deploying).
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "poptop-photos" }],
+
   // database_id from `npm run db:create`. The cron lives in workers/refresh.
   "d1_databases": [
     {
