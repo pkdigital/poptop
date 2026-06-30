@@ -10,6 +10,9 @@ const title = "Poptop — UK motorhome & campervan stopovers and refill points";
 <Base title={title}>
   <Fragment slot="head">
     <style>
+      /* Wider content to match the footer width. */
+      .wrap.home-wrap { max-width: 1320px; }
+
       /* ---- Hero (mobile-first) ---- */
       .hero {
         background:
@@ -99,7 +102,7 @@ const title = "Poptop — UK motorhome & campervan stopovers and refill points";
     </div>
   </section>
 
-  <div class="wrap">
+  <div class="wrap home-wrap">
     <!-- VALUE STRIP -->
     <section class="values">
       <div class="value card">
@@ -127,9 +130,9 @@ const title = "Poptop — UK motorhome & campervan stopovers and refill points";
       </div>
       <div id="map"></div>
       <p class="legend">
-        <span><i class="dot" style="background:#1f7a52"></i> Sites &amp; aires</span>
-        <span><i class="dot" style="background:#0369a1"></i> Drinking water</span>
-        <span><i class="dot" style="background:#b45309"></i> Waste disposal</span>
+        <span><i class="dot" style="background:#16a34a"></i> Sites &amp; aires</span>
+        <span><i class="dot" style="background:#0ea5e9"></i> Drinking water</span>
+        <span><i class="dot" style="background:#f97316"></i> Waste disposal</span>
         <span><i class="dot" style="background:#ff385c"></i> Community stopovers</span>
       </p>
     </section>
@@ -179,7 +182,7 @@ const title = "Poptop — UK motorhome & campervan stopovers and refill points";
       if (!res.ok) return;
       const data = await res.json();
 
-      const WATER = "#0369a1", WASTE = "#b45309", SITE = "#1f7a52", COMMUNITY = "#ff385c";
+      const WATER = "#0ea5e9", WASTE = "#f97316", SITE = "#16a34a", COMMUNITY = "#ff385c";
       const isWater = ["in", ["get", "kind"], ["literal", ["drinking_water", "water_point"]]];
       const isWaste = ["==", ["get", "kind"], "dump_station"];
 
@@ -198,19 +201,20 @@ const title = "Poptop — UK motorhome & campervan stopovers and refill points";
       const site = ["-", ["get", "point_count"], ["+", ["get", "water"], ["get", "waste"]]];
       const w = ["get", "water"], d = ["get", "waste"];
 
+      const colorExpr = () => ["case", ["all", [">=", d, w], [">=", d, site]], WASTE, ["all", [">=", w, d], [">=", w, site]], WATER, SITE];
+      const ringR = (add) => ["+", ["step", ["get", "point_count"], 13, 25, 17, 100, 23], add];
+      map.addLayer({ id: "cluster-halo2", type: "circle", source: "places", filter: ["has", "point_count"],
+        paint: { "circle-color": colorExpr(), "circle-radius": ringR(10), "circle-opacity": 0.16 } });
+      map.addLayer({ id: "cluster-halo1", type: "circle", source: "places", filter: ["has", "point_count"],
+        paint: { "circle-color": colorExpr(), "circle-radius": ringR(5), "circle-opacity": 0.32 } });
       map.addLayer({
         id: "clusters",
         type: "circle",
         source: "places",
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": [
-            "case",
-            ["all", [">=", d, w], [">=", d, site]], WASTE,
-            ["all", [">=", w, d], [">=", w, site]], WATER,
-            SITE,
-          ],
-          "circle-radius": ["step", ["get", "point_count"], 16, 25, 22, 100, 30],
+          "circle-color": colorExpr(),
+          "circle-radius": ringR(0),
           "circle-stroke-width": 2,
           "circle-stroke-color": "#fff",
         },

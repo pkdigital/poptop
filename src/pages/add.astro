@@ -126,7 +126,7 @@ const description = "Share a motorhome stopover, pub park-up or refill point wit
       lngIn.value = lng.toFixed(6);
       coords.textContent = `Pin: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       if (marker) marker.setLngLat([lng, lat]);
-      else marker = new maplibregl.Marker({ color: "#c2410c", draggable: true }).setLngLat([lng, lat]).addTo(map);
+      else marker = new maplibregl.Marker({ color: "#ff385c", draggable: true }).setLngLat([lng, lat]).addTo(map);
       marker.on("dragend", () => {
         const p = marker.getLngLat();
         setPin(p.lng, p.lat);

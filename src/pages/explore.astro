@@ -31,9 +31,9 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
 
       /* Split layout */
       .explore { position: relative; }
-      .ex-list { padding: 1rem; }
-      .ex-count { font-weight: 700; margin: 0 0.25rem 0.75rem; }
-      .ex-grid { display: grid; gap: 0.9rem; grid-template-columns: 1fr; }
+      .ex-list { padding: 1.25rem; }
+      .ex-count { font-weight: 700; margin: 0 0.1rem 1rem; }
+      .ex-grid { display: grid; gap: 1.5rem 1.25rem; grid-template-columns: 1fr; }
 
       /* (Card + suggestion-item styles are global below — they're built in JS.) */
 
@@ -51,7 +51,8 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
         .explore { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
         .ex-list { height: calc(100vh - 64px - 61px); overflow: auto; }
         .ex-grid { grid-template-columns: 1fr 1fr; }
-        .ex-map { position: sticky; top: calc(64px + 61px); height: calc(100vh - 64px - 61px); display: block; }
+        .ex-map { position: sticky; top: calc(64px + 61px); height: calc(100vh - 64px - 61px); display: block; padding: 1rem 1rem 1rem 0; }
+        #map { border-radius: var(--r-lg); }
         .explore.map-on .ex-list { display: block; }
       }
     </style>
@@ -59,18 +60,16 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
     <!-- Global: these elements are created in JS (innerHTML), so scoped styles
          won't reach them. -->
     <style is:global>
-      .pcard { display: block; color: var(--ink); border-radius: var(--r); overflow: hidden;
-        background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm);
-        transition: transform 0.08s, box-shadow 0.15s, border-color 0.15s; }
-      .pcard:hover { text-decoration: none; transform: translateY(-2px); box-shadow: var(--shadow); border-color: #bbb; }
-      .pcard .thumb { position: relative; height: 140px; display: grid; place-items: center; font-size: 2.4rem; color: #fff; overflow: hidden; }
+      .pcard { display: block; color: var(--ink); }
+      .pcard:hover { text-decoration: none; }
+      .pcard .thumb { position: relative; height: 300px; display: grid; place-items: center; font-size: 2.4rem; color: #fff; overflow: hidden; border-radius: var(--r); }
       .pcard .thumb > svg { position: relative; }
       .pcard .thumb-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.35s; }
       .pcard .skeleton { position: absolute; inset: 0; background: #ebebeb; overflow: hidden; }
       .pcard .skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
         background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent); animation: poptop-shimmer 1.3s infinite; }
       @keyframes poptop-shimmer { 100% { transform: translateX(100%); } }
-      .pcard .body { padding: 0.7rem 0.85rem 0.85rem; }
+      .pcard .body { padding: 0.6rem 0.15rem 0; }
       .pcard h3 { margin: 0; font-size: 1rem; }
       .pcard .meta { color: var(--muted); font-size: 0.85rem; margin: 0.15rem 0 0; }
       .pcard .badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
@@ -80,6 +79,25 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
       .suggest li .ic { color: var(--muted); }
       .suggest li:hover, .suggest li.active { background: var(--tint); }
       .suggest .county { color: var(--muted); font-size: 0.85rem; }
+
+      /* App-view: hide the global footer so the page is exactly one viewport tall
+         (the list pane scrolls internally) — avoids a second window scrollbar. */
+      .site-footer { display: none; }
+      @media (min-width: 900px) { body { overflow: hidden; } }
+
+      /* Rich, animated map popup — mirrors the result card. */
+      .place-popup .maplibregl-popup-content { padding: 0; border-radius: 16px; overflow: hidden;
+        box-shadow: var(--shadow-lg); animation: popupIn 0.18s ease-out; }
+      .place-popup.popup-closing .maplibregl-popup-content { animation: popupOut 0.16s ease-in forwards; }
+      .place-popup .maplibregl-popup-tip { display: none; }
+      @keyframes popupIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
+      @keyframes popupOut { to { opacity: 0; transform: translateY(6px) scale(0.97); } }
+      .pp { position: relative; width: 248px; }
+      .pp .pcard .thumb { border-radius: 0; height: 140px; }
+      .pp .pcard .body { padding: 0.6rem 0.8rem 0.85rem; }
+      .pp-close { position: absolute; top: 8px; right: 8px; z-index: 3; width: 28px; height: 28px;
+        border-radius: 50%; border: 0; background: rgba(255,255,255,0.95); color: var(--ink); cursor: pointer;
+        font-size: 1.15rem; line-height: 1; display: grid; place-items: center; box-shadow: var(--shadow-sm); }
     </style>
   </Fragment>
 
@@ -116,7 +134,7 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
     import "maplibre-gl/dist/maplibre-gl.css";
     import { icons } from "../lib/icons.mjs";
 
-    const WATER = "#0369a1", WASTE = "#b45309", SITE = "#1f7a52", COMMUNITY = "#ff385c";
+    const WATER = "#0ea5e9", WASTE = "#f97316", SITE = "#16a34a", COMMUNITY = "#ff385c";
     const visual = (p) => {
       if (p.source === "community") return { c: COMMUNITY, ic: p.kind === "pub" ? icons.beer : icons.house };
       if (p.kind === "drinking_water" || p.kind === "water_point") return { c: WATER, ic: icons.droplet };
@@ -243,9 +261,15 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
         clusterProperties: { water: ["+", ["case", isWater, 1, 0]], waste: ["+", ["case", isWaste, 1, 0]] } });
       const site = ["-", ["get", "point_count"], ["+", ["get", "water"], ["get", "waste"]]];
       const w = ["get", "water"], d = ["get", "waste"];
+      // Concentric fading rings: solid core + two thin translucent halos (Google-style).
+      const colorExpr = () => ["case", ["all", [">=", d, w], [">=", d, site]], WASTE, ["all", [">=", w, d], [">=", w, site]], WATER, SITE];
+      const ringR = (add) => ["+", ["step", ["get", "point_count"], 13, 25, 17, 100, 23], add];
+      map.addLayer({ id: "cluster-halo2", type: "circle", source: "places", filter: ["has", "point_count"],
+        paint: { "circle-color": colorExpr(), "circle-radius": ringR(10), "circle-opacity": 0.16 } });
+      map.addLayer({ id: "cluster-halo1", type: "circle", source: "places", filter: ["has", "point_count"],
+        paint: { "circle-color": colorExpr(), "circle-radius": ringR(5), "circle-opacity": 0.32 } });
       map.addLayer({ id: "clusters", type: "circle", source: "places", filter: ["has", "point_count"],
-        paint: { "circle-color": ["case", ["all", [">=", d, w], [">=", d, site]], WASTE, ["all", [">=", w, d], [">=", w, site]], WATER, SITE],
-          "circle-radius": ["step", ["get", "point_count"], 16, 25, 22, 100, 30], "circle-stroke-width": 2, "circle-stroke-color": "#fff" } });
+        paint: { "circle-color": colorExpr(), "circle-radius": ringR(0), "circle-stroke-width": 2, "circle-stroke-color": "#fff" } });
       map.addLayer({ id: "cluster-count", type: "symbol", source: "places", filter: ["has", "point_count"],
         layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Bold"], "text-size": 13 }, paint: { "text-color": "#fff" } });
       map.addLayer({ id: "unclustered", type: "circle", source: "places", filter: ["!", ["has", "point_count"]],
@@ -257,11 +281,43 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
         const zoom = await map.getSource("places").getClusterExpansionZoom(f.properties.cluster_id);
         map.easeTo({ center: f.geometry.coordinates, zoom });
       });
+      let activePopup = null;
+      function closePopup() {
+        if (!activePopup) return;
+        const p = activePopup; activePopup = null;
+        const el = p.getElement();
+        if (el) el.classList.add("popup-closing");
+        setTimeout(() => p.remove(), 170);
+      }
       map.on("click", "unclustered", (e) => {
         const f = e.features && e.features[0]; if (!f) return;
         const p = f.properties;
-        new maplibregl.Popup({ offset: 10 }).setLngLat(f.geometry.coordinates.slice())
-          .setHTML(`<strong>${p.label}</strong><br>${p.kindLabel}<br><a href="/place/${p.source}/${p.id}">View details →</a>`).addTo(map);
+        const [lng, lat] = f.geometry.coordinates;
+        const c = map.getCenter();
+        const origin = userLoc || { lat: c.lat, lng: c.lng };
+        const dist = miles(origin.lat, origin.lng, lat, lng).toFixed(1);
+        const v = visual(p);
+        const badges = badgesFor(p).map((x) => `<span class="pill">${x}</span>`).join("");
+        const html =
+          `<div class="pp"><button class="pp-close" type="button" aria-label="Close">×</button>` +
+          `<a class="pcard" href="/place/${p.source}/${p.id}">` +
+          `<div class="thumb" style="background:linear-gradient(135deg, ${v.c}, ${v.c}cc)">${v.ic}` +
+          `<img class="thumb-img" loading="lazy" alt="" src="/api/streetview?lat=${lat}&lng=${lng}" ` +
+          `onload="this.style.opacity=1;var s=this.nextElementSibling;if(s)s.remove()" ` +
+          `onerror="var s=this.nextElementSibling;if(s)s.remove();this.remove()"><span class="skeleton"></span></div>` +
+          `<div class="body"><h3>${p.label}</h3>` +
+          `<p class="meta">${p.kindLabel}${p.source === "community" ? " · Community" : ""} · ${dist} mi</p>` +
+          (badges ? `<div class="badges">${badges}</div>` : ``) +
+          `</div></a></div>`;
+        closePopup();
+        activePopup = new maplibregl.Popup({ offset: 14, closeButton: false, closeOnClick: false, className: "place-popup", maxWidth: "280px" })
+          .setLngLat([lng, lat]).setHTML(html).addTo(map);
+        const btn = activePopup.getElement()?.querySelector(".pp-close");
+        if (btn) btn.addEventListener("click", (ev) => { ev.preventDefault(); ev.stopPropagation(); closePopup(); });
+      });
+      // Close the popup when clicking the map away from a marker.
+      map.on("click", (e) => {
+        if (!map.queryRenderedFeatures(e.point, { layers: ["unclustered"] }).length) closePopup();
       });
       for (const l of ["clusters", "unclustered"]) {
         map.on("mouseenter", l, () => (map.getCanvas().style.cursor = "pointer"));

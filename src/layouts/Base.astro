@@ -30,7 +30,7 @@ const canonicalUrl = new URL(canonical, Astro.site).href;
   </head>
   <body>
     <header class="site-header">
-      <div class="wrap header-inner">
+      <div class="header-inner">
         <a class="brand" href="/">
           <span class="brand-mark"><Icon name="caravan" size="1.1rem" /></span>
           <span class="brand-name">Poptop</span>
@@ -172,7 +172,8 @@ const canonicalUrl = new URL(canonical, Astro.site).href;
         background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(10px);
         border-bottom: 1px solid var(--line);
       }
-      .header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+      .header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px;
+        width: 100%; padding: 0 clamp(1rem, 3vw, 2.5rem); }
       .brand { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 1.25rem; color: var(--ink); }
       .brand:hover { text-decoration: none; }
       .brand-mark {
@@ -184,6 +185,7 @@ const canonicalUrl = new URL(canonical, Astro.site).href;
 
       /* Footer */
       .site-footer { margin-top: 3.5rem; border-top: 1px solid var(--line); background: var(--bg-alt); padding: 2.5rem 0 2rem; }
+      .site-footer .wrap { max-width: 1320px; }
       .foot-grid { display: flex; gap: 2rem; justify-content: space-between; flex-wrap: wrap; }
       .foot-grid .muted { max-width: 36ch; }
       .brand--foot { font-size: 1.1rem; margin-bottom: 0.4rem; }
