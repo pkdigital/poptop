@@ -1,0 +1,267 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getPlace } from "../../lib/places.mjs";
+import { getFeedback, getApprovedReviews } from "../../lib/engagement.mjs";
+import { getOrFetchGeo } from "../../lib/geo.mjs";
+import { kindLabel, facilityBadges } from "../../lib/format.mjs";
+import Icon from "../../components/Icon.astro";
+
+export const prerender = false;
+
+const slug = Astro.params.slug || "";
+const parts = slug.split("/");
+const source = parts[0];
+const id = parts.slice(1).join("/");
+if (!source || !id) return new Response("Not found", { status: 404 });
+
+const env = Astro.locals.runtime.env;
+const place = await getPlace(env.DB, source, id);
+if (!place) return new Response("Not found", { status: 404 });
+
+const ref = `${source}/${id}`;
+const [feedback, reviews, geo] = await Promise.all([
+  getFeedback(env.DB, ref),
+  getApprovedReviews(env.DB, ref),
+  getOrFetchGeo(env.DB, ref, place.lat, place.lng),
+]);
+
+const name = place.name || kindLabel(place.kind);
+const title = `${name} — motorhome ${kindLabel(place.kind).toLowerCase()} | Poptop`;
+const description = `${name}: a motorhome/campervan ${kindLabel(place.kind).toLowerCase()} in the UK. Location, facilities, directions and reviews on Poptop.`;
+
+let tags: Record<string, string> = {};
+if (source === "osm" && place.tags) {
+  try { tags = JSON.parse(place.tags); } catch {}
+}
+const website = tags.website || tags["contact:website"] || place.contact;
+const phone = tags.phone || tags["contact:phone"];
+const openingHours = tags.opening_hours;
+const operator = tags.operator;
+const badges = facilityBadges(place);
+
+const directions = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
+const osmLink = source === "osm" ? `https://www.openstreetmap.org/${id}` : null;
+
+const w3w = geo.w3w ? `///${geo.w3w}` : null;
+const w3wLink = geo.w3w ? `https://what3words.com/${geo.w3w}` : null;
+const addrLine = [geo.postcode, geo.district, geo.region].filter(Boolean).join(", ") || null;
+
+const ratings = reviews.map((r: any) => r.rating).filter((n: any) => n >= 1 && n <= 5);
+const avgRating = ratings.length
+  ? (ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length).toFixed(1)
+  : null;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": source === "community" ? "LocalBusiness" : "Campground",
+  name,
+  geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lng },
+  ...(addrLine ? { address: addrLine } : {}),
+  ...(website ? { url: website } : {}),
+  ...(phone ? { telephone: phone } : {}),
+  ...(avgRating
+    ? { aggregateRating: { "@type": "AggregateRating", ratingValue: avgRating, reviewCount: ratings.length } }
+    : {}),
+};
+---
+
+<Base title={title} description={description}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <style>
+      .detail { padding: 1.5rem 0 1rem; }
+      .hero-img { width: 100%; height: clamp(180px, 32vw, 300px); object-fit: cover; border-radius: var(--r-lg); border: 1px solid var(--line); margin-bottom: 1.1rem; box-shadow: var(--shadow-sm); }
+      .crumbs { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.6rem; }
+      .detail h1 { margin: 0 0 0.3rem; }
+      .detail h2 { margin: 2rem 0 0.7rem; }
+      .kind { color: var(--muted); margin: 0 0 0.85rem; font-weight: 500; }
+      .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.85rem 0; }
+      #pmap { height: 300px; border-radius: var(--r-lg); border: 1px solid var(--line); box-shadow: var(--shadow); margin: 1.25rem 0; }
+      .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 1rem 0 0.5rem; }
+      .facts-card { padding: 1.1rem 1.25rem; }
+      .facts { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.55rem; }
+      .facts li { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+      .facts .k { color: var(--muted); min-width: 8rem; }
+      .w3w { color: #e11d48; font-weight: 700; }
+
+      .verify { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+      .vote { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0.55rem 0.95rem; cursor: pointer; font: inherit; font-weight: 600; box-shadow: var(--shadow-sm); }
+      .vote:hover { background: var(--bg-alt); }
+      .vote[disabled] { opacity: 0.55; cursor: default; }
+      .vote-msg { color: var(--muted); font-size: 0.9rem; }
+
+      .review { border-top: 1px solid var(--line); padding: 0.9rem 0; }
+      .review:first-of-type { border-top: 0; }
+      .review .who { font-weight: 700; }
+      .review .stars { color: #d97706; font-weight: 600; }
+      .review p { margin: 0.3rem 0 0; }
+
+      .review-form { display: grid; gap: 0.6rem; margin-top: 1rem; max-width: 560px; }
+      .review-form .row { display: grid; gap: 0.6rem; }
+      .review-msg { color: var(--muted); font-size: 0.9rem; }
+      .src-note { font-size: 0.82rem; color: var(--muted); margin-top: 1.75rem; }
+
+      @media (min-width: 560px) { .review-form .row { grid-template-columns: 1fr 1fr; } }
+    </style>
+  </Fragment>
+
+  <div class="wrap detail">
+    <img class="hero-img" alt={name} src={`/api/streetview?lat=${place.lat}&lng=${place.lng}`} onerror="this.remove()" />
+    <p class="crumbs"><a href="/">Map</a> › {name}</p>
+    <h1>{name}</h1>
+    <p class="kind">
+      {kindLabel(place.kind)}{source === "community" ? " · Community listing" : ""}
+      {avgRating ? ` · ★ ${avgRating} (${ratings.length})` : ""}
+    </p>
+
+    {badges.length > 0 && (
+      <div class="badges">{badges.map((b) => <span class="pill"><Icon name={b.icon} size="0.85rem" /> {b.label}</span>)}</div>
+    )}
+
+    <div id="pmap" data-lat={place.lat} data-lng={place.lng}></div>
+
+    <div class="actions">
+      <a class="btn" href={directions} rel="nofollow" target="_blank"><Icon name="navigation" size="1rem" /> Get directions</a>
+      {website && <a class="btn-ghost btn" href={website} rel="nofollow" target="_blank">Website</a>}
+    </div>
+
+    <h2>Is this still here and correct?</h2>
+    <div class="verify" id="verify" data-ref={ref}>
+      <button class="vote" data-vote="up"><Icon name="thumbsUp" size="1rem" /> Yes <span class="up">{feedback.up}</span></button>
+      <button class="vote" data-vote="down"><Icon name="thumbsDown" size="1rem" /> No / gone <span class="down">{feedback.down}</span></button>
+      <span class="vote-msg" id="vote-msg"></span>
+    </div>
+
+    <h2>Location</h2>
+    <div class="card facts-card">
+      <ul class="facts">
+        {addrLine && <li><span class="k">Address</span><span>{addrLine}</span></li>}
+        {w3w && (
+          <li><span class="k">what3words</span>
+            <span><a class="w3w" href={w3wLink} rel="nofollow" target="_blank">{w3w}</a></span>
+          </li>
+        )}
+        <li><span class="k">Coordinates</span><span>{place.lat.toFixed(5)}, {place.lng.toFixed(5)}</span></li>
+        {operator && <li><span class="k">Operator</span><span>{operator}</span></li>}
+        {openingHours && <li><span class="k">Opening hours</span><span>{openingHours}</span></li>}
+        {phone && <li><span class="k">Phone</span><span>{phone}</span></li>}
+        {place.fee && <li><span class="k">Fee</span><span>{place.fee}</span></li>}
+      </ul>
+    </div>
+
+    {place.description && <><h2>About</h2><p>{place.description}</p></>}
+
+    <h2>Reviews &amp; comments</h2>
+    {reviews.length === 0 ? (
+      <p class="muted">No reviews yet — be the first to share what this spot is like.</p>
+    ) : (
+      <div>
+        {reviews.map((r: any) => (
+          <div class="review">
+            <div class="who">
+              {r.author || "Anonymous"}
+              {r.rating ? <span class="stars"> · {"★".repeat(r.rating)}</span> : null}
+            </div>
+            <p>{r.body}</p>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <form class="review-form" id="review-form" data-ref={ref}>
+      <div class="row">
+        <input type="text" name="author" placeholder="Your name (optional)" maxlength="60" />
+        <select name="rating">
+          <option value="">Rating (optional)</option>
+          <option value="5">★★★★★</option>
+          <option value="4">★★★★</option>
+          <option value="3">★★★</option>
+          <option value="2">★★</option>
+          <option value="1">★</option>
+        </select>
+      </div>
+      <textarea name="body" rows="3" placeholder="Share your experience…" required maxlength="2000"></textarea>
+      <button class="btn" type="submit">Post review</button>
+      <span class="review-msg" id="review-msg"></span>
+    </form>
+
+    {osmLink && (
+      <p class="src-note">
+        Source: <a href={osmLink} rel="nofollow" target="_blank">OpenStreetMap</a> contributors.
+        Spotted something wrong? Edits made on OSM flow through on the next refresh.
+      </p>
+    )}
+  </div>
+
+  <script>
+    // @ts-nocheck
+    import maplibregl from "maplibre-gl";
+    import "maplibre-gl/dist/maplibre-gl.css";
+
+    const el = document.getElementById("pmap");
+    const lat = Number(el.dataset.lat), lng = Number(el.dataset.lng);
+    const map = new maplibregl.Map({
+      container: "pmap",
+      style: "https://tiles.openfreemap.org/styles/positron",
+      center: [lng, lat],
+      zoom: 14,
+      interactive: false,
+    });
+    new maplibregl.Marker({ color: "#1f5f43" }).setLngLat([lng, lat]).addTo(map);
+
+    const verify = document.getElementById("verify");
+    const ref = verify.dataset.ref;
+    const voteKey = "voted:" + ref;
+    const buttons = verify.querySelectorAll(".vote");
+    if (localStorage.getItem(voteKey)) {
+      buttons.forEach((b) => (b.disabled = true));
+      document.getElementById("vote-msg").textContent = "Thanks — you've already voted.";
+    }
+    buttons.forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        const vote = btn.dataset.vote;
+        buttons.forEach((b) => (b.disabled = true));
+        try {
+          const res = await fetch("/api/feedback", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ref, vote }),
+          });
+          const data = await res.json();
+          verify.querySelector(".up").textContent = data.up;
+          verify.querySelector(".down").textContent = data.down;
+          localStorage.setItem(voteKey, vote);
+          document.getElementById("vote-msg").textContent = "Thanks for confirming!";
+        } catch {
+          buttons.forEach((b) => (b.disabled = false));
+        }
+      })
+    );
+
+    const form = document.getElementById("review-form");
+    const msg = document.getElementById("review-msg");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const payload = {
+        ref: form.dataset.ref,
+        author: fd.get("author"),
+        rating: fd.get("rating"),
+        body: fd.get("body"),
+      };
+      msg.textContent = "Posting…";
+      try {
+        const res = await fetch("/api/reviews", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error();
+        form.reset();
+        msg.textContent = "Thanks! Your review is pending moderation and will appear shortly.";
+      } catch {
+        msg.textContent = "Sorry, something went wrong. Please try again.";
+      }
+    });
+  </script>
+</Base>

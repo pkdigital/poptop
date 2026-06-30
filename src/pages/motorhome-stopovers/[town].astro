@@ -1,0 +1,109 @@
+---
+import Base from "../../layouts/Base.astro";
+import { TOWN_BY_SLUG } from "../../data/towns.mjs";
+import { queryPlaces } from "../../lib/places.mjs";
+import { kindLabel, distanceMiles, facilityBadges } from "../../lib/format.mjs";
+import Icon from "../../components/Icon.astro";
+
+export const prerender = false;
+
+const { town } = Astro.params;
+const t = town ? TOWN_BY_SLUG[town] : undefined;
+if (!t) return new Response("Not found", { status: 404 });
+
+const d = 0.18;
+const data = await queryPlaces(Astro.locals.runtime.env.DB, {
+  n: t.lat + d, s: t.lat - d, e: t.lng + d, w: t.lng - d, limit: 250,
+});
+
+const places = [...data.community, ...data.osm]
+  .map((p: any) => ({ ...p, miles: distanceMiles(t.lat, t.lng, p.lat, p.lng) }))
+  .sort((a: any, b: any) => a.miles - b.miles);
+
+const title = `Motorhome stopovers near ${t.name}, ${t.county} | Poptop`;
+const description = `${places.length} motorhome & campervan stopovers, aires, sites and refill points within ~12 miles of ${t.name}, ${t.county}. Free, community-driven UK directory.`;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: `Motorhome stopovers near ${t.name}`,
+  numberOfItems: places.length,
+  itemListElement: places.slice(0, 50).map((p: any, i: number) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    item: {
+      "@type": p.source === "community" ? "LocalBusiness" : "Campground",
+      name: p.name || kindLabel(p.kind),
+      geo: { "@type": "GeoCoordinates", latitude: p.lat, longitude: p.lng },
+    },
+  })),
+};
+---
+
+<Base title={title} description={description}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <style>
+      .town-hero { background: linear-gradient(180deg, var(--bg-alt), var(--bg)); border-bottom: 1px solid var(--line); }
+      .town-hero .inner { padding: 1.75rem 0 2rem; }
+      .crumbs { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem; }
+      .town-hero h1 { margin: 0 0 0.35rem; }
+      .lede { color: var(--muted); margin: 0; max-width: 60ch; }
+
+      .list { list-style: none; padding: 0; margin: 1.75rem 0; display: grid; gap: 0.85rem; grid-template-columns: 1fr; }
+      .place { padding: 1rem 1.15rem; display: block; color: var(--ink); transition: transform 0.08s, box-shadow 0.15s, border-color 0.15s; }
+      .place:hover { text-decoration: none; transform: translateY(-2px); box-shadow: var(--shadow); border-color: #d8cfbd; }
+      .place .top { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+      .place h3 { margin: 0; font-size: 1.08rem; }
+      .place .dist { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+      .place .meta { font-size: 0.88rem; color: var(--muted); margin: 0.2rem 0 0; }
+      .place .desc { font-size: 0.9rem; margin: 0.45rem 0 0; }
+      .badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.6rem; }
+      .empty { padding: 1.5rem; text-align: center; }
+
+      @media (min-width: 680px) { .list { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+  </Fragment>
+
+  <section class="town-hero">
+    <div class="wrap inner">
+      <p class="crumbs"><a href="/">Home</a> › Stopovers near {t.name}</p>
+      <h1>Motorhome stopovers near {t.name}</h1>
+      <p class="lede">
+        {places.length} stopovers and refill points within about 12 miles of {t.name}, {t.county}.
+      </p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    {places.length === 0 ? (
+      <div class="empty card">
+        <p>No listings here yet. Know a spot near {t.name}?</p>
+        <a class="btn btn-accent" href="/add">Add the first one</a>
+      </div>
+    ) : (
+      <ul class="list">
+        {places.map((p: any) => (
+          <li>
+            <a class="place card" href={`/place/${p.source}/${p.id}`}>
+              <div class="top">
+                <h3>{p.name || kindLabel(p.kind)}</h3>
+                <span class="dist">{p.miles.toFixed(1)} mi</span>
+              </div>
+              <p class="meta">
+                {kindLabel(p.kind)}
+                {p.source === "community" ? " · Community" : ""}
+              </p>
+              {p.description && <p class="desc">{p.description}</p>}
+              {facilityBadges(p).length > 0 && (
+                <div class="badges">
+                  {facilityBadges(p).map((b) => <span class="pill"><Icon name={b.icon} size="0.85rem" /> {b.label}</span>)}
+                </div>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</Base>

@@ -1,0 +1,268 @@
+---
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+import { TOWNS } from "../data/towns.mjs";
+
+export const prerender = false;
+const title = "Poptop — UK motorhome & campervan stopovers and refill points";
+---
+
+<Base title={title}>
+  <Fragment slot="head">
+    <style>
+      /* ---- Hero (mobile-first) ---- */
+      .hero {
+        background:
+          radial-gradient(1200px 400px at 80% -10%, rgba(255,56,92,0.07), transparent 60%),
+          linear-gradient(180deg, var(--bg-alt), var(--bg));
+        border-bottom: 1px solid var(--line);
+      }
+      .hero-inner { padding: 2.5rem 1.25rem 2.75rem; text-align: center; }
+      .hero h1 { margin: 0 0 0.5rem; }
+      .hero-sub { color: var(--muted); font-size: 1.05rem; max-width: 46ch; margin: 0 auto 1.5rem; }
+      .searchbar {
+        display: flex; flex-direction: column; gap: 0.6rem;
+        max-width: 540px; margin: 0 auto;
+      }
+      .searchbar .field { position: relative; flex: 1; }
+      .searchbar .field .search-ic { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: var(--muted); }
+      .searchbar input { padding-left: 2.4rem; height: 52px; border-radius: 12px; box-shadow: var(--shadow-sm); }
+      .searchbar .btn { height: 52px; border-radius: 12px; }
+      .hero-stats { margin-top: 1.1rem; font-size: 0.9rem; color: var(--muted); }
+      .hero-stats strong { color: var(--brand-dark); }
+
+      /* ---- Value strip ---- */
+      .values { display: grid; gap: 0.9rem; padding: 2rem 0 0.5rem; }
+      .value { padding: 1.1rem 1.2rem; }
+      .value .ico { color: var(--brand); }
+      .value h3 { margin: 0.4rem 0 0.25rem; font-size: 1.05rem; }
+      .value p { margin: 0; font-size: 0.92rem; color: var(--muted); }
+
+      /* ---- Map ---- */
+      .map-section { padding-top: 2.25rem; }
+      .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.85rem; }
+      .section-head h2 { margin: 0; }
+      #map {
+        height: 60vh; min-height: 340px; width: 100%;
+        border-radius: var(--r-lg); border: 1px solid var(--line);
+        box-shadow: var(--shadow); overflow: hidden;
+      }
+      .legend { display: flex; gap: 1rem 1.25rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); margin: 0.75rem 0.25rem 0; }
+      .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+      .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+
+      /* ---- Towns ---- */
+      .towns { padding: 2.5rem 0 1rem; }
+      .town-grid { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 0.7rem; grid-template-columns: 1fr; }
+      .town-card {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.85rem 1.05rem; border-radius: var(--r); background: var(--card);
+        border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+        color: var(--ink); transition: transform 0.08s, box-shadow 0.15s, border-color 0.15s;
+      }
+      .town-card:hover { text-decoration: none; transform: translateY(-2px); box-shadow: var(--shadow); border-color: #d8cfbd; }
+      .town-card .name { font-weight: 700; }
+      .town-card .county { font-size: 0.85rem; color: var(--muted); }
+      .town-card .arrow { color: var(--brand); font-weight: 800; }
+
+      /* ---- Responsive enhancements ---- */
+      @media (min-width: 560px) {
+        .searchbar { flex-direction: row; }
+        .hero-inner { padding: 4rem 1.25rem; }
+      }
+      @media (min-width: 720px) {
+        .values { grid-template-columns: repeat(3, 1fr); }
+        .town-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (min-width: 980px) {
+        .town-grid { grid-template-columns: repeat(3, 1fr); }
+      }
+    </style>
+  </Fragment>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Where will you park up tonight?</h1>
+      <p class="hero-sub">
+        Pub stopovers, aires, sites and refill points across the UK — on one map,
+        no Facebook group required.
+      </p>
+      <form class="searchbar" action="/explore" method="get" autocomplete="off">
+        <div class="field">
+          <span class="search-ic"><Icon name="search" size="1rem" /></span>
+          <input name="q" placeholder="Search any town or postcode" aria-label="Search a location" style="padding-left:2.4rem" />
+        </div>
+        <button class="btn" type="submit">Search</button>
+      </form>
+      <p class="hero-stats"><strong>11,800+</strong> places mapped · free forever</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <!-- VALUE STRIP -->
+    <section class="values">
+      <div class="value card">
+        <div class="ico"><Icon name="bed" size="1.6rem" /></div>
+        <h3>Somewhere to sleep</h3>
+        <p>Pub stopovers, aires, certified sites and quiet park-ups, all in one place.</p>
+      </div>
+      <div class="value card">
+        <div class="ico"><Icon name="droplet" size="1.6rem" /></div>
+        <h3>Refill &amp; empty</h3>
+        <p>Find drinking water and toilet/waste disposal points along your route.</p>
+      </div>
+      <div class="value card">
+        <div class="ico"><Icon name="users" size="1.6rem" /></div>
+        <h3>Kept honest</h3>
+        <p>Community-checked: confirm a spot's still there, or add one you love.</p>
+      </div>
+    </section>
+
+    <!-- MAP -->
+    <section class="map-section">
+      <div class="section-head">
+        <h2>Explore the map</h2>
+        <span class="muted">Tap a cluster to zoom in</span>
+      </div>
+      <div id="map"></div>
+      <p class="legend">
+        <span><i class="dot" style="background:#1f7a52"></i> Sites &amp; aires</span>
+        <span><i class="dot" style="background:#0369a1"></i> Drinking water</span>
+        <span><i class="dot" style="background:#b45309"></i> Waste disposal</span>
+        <span><i class="dot" style="background:#ff385c"></i> Community stopovers</span>
+      </p>
+    </section>
+
+    <!-- TOWNS -->
+    <section class="towns">
+      <div class="section-head">
+        <h2>Browse stopovers by town</h2>
+      </div>
+      <ul class="town-grid">
+        {TOWNS.map((t) => (
+          <li>
+            <a class="town-card" href={`/motorhome-stopovers/${t.slug}`}>
+              <span>
+                <span class="name">{t.name}</span><br />
+                <span class="county">{t.county}</span>
+              </span>
+              <span class="arrow"><Icon name="arrowRight" size="1.1rem" /></span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    // @ts-nocheck — interactive clustered map.
+    import maplibregl from "maplibre-gl";
+    import "maplibre-gl/dist/maplibre-gl.css";
+
+    const map = new maplibregl.Map({
+      container: "map",
+      style: "https://tiles.openfreemap.org/styles/positron",
+      center: [-3.0, 54.5],
+      zoom: 4.6,
+    });
+    map.addControl(new maplibregl.NavigationControl());
+    map.addControl(
+      new maplibregl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true,
+      })
+    );
+
+    map.on("load", async () => {
+      const res = await fetch("/api/places.geojson");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const WATER = "#0369a1", WASTE = "#b45309", SITE = "#1f7a52", COMMUNITY = "#ff385c";
+      const isWater = ["in", ["get", "kind"], ["literal", ["drinking_water", "water_point"]]];
+      const isWaste = ["==", ["get", "kind"], "dump_station"];
+
+      map.addSource("places", {
+        type: "geojson",
+        data,
+        cluster: true,
+        clusterRadius: 55,
+        clusterMaxZoom: 12,
+        clusterProperties: {
+          water: ["+", ["case", isWater, 1, 0]],
+          waste: ["+", ["case", isWaste, 1, 0]],
+        },
+      });
+
+      const site = ["-", ["get", "point_count"], ["+", ["get", "water"], ["get", "waste"]]];
+      const w = ["get", "water"], d = ["get", "waste"];
+
+      map.addLayer({
+        id: "clusters",
+        type: "circle",
+        source: "places",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": [
+            "case",
+            ["all", [">=", d, w], [">=", d, site]], WASTE,
+            ["all", [">=", w, d], [">=", w, site]], WATER,
+            SITE,
+          ],
+          "circle-radius": ["step", ["get", "point_count"], 16, 25, 22, 100, 30],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#fff",
+        },
+      });
+
+      map.addLayer({
+        id: "cluster-count",
+        type: "symbol",
+        source: "places",
+        filter: ["has", "point_count"],
+        layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Bold"], "text-size": 13 },
+        paint: { "text-color": "#fff" },
+      });
+
+      map.addLayer({
+        id: "unclustered",
+        type: "circle",
+        source: "places",
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": ["case", ["==", ["get", "source"], "community"], COMMUNITY, isWater, WATER, isWaste, WASTE, SITE],
+          "circle-radius": 6,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#fff",
+        },
+      });
+
+      map.on("click", "clusters", async (e) => {
+        const f = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
+        const src = map.getSource("places");
+        const zoom = await src.getClusterExpansionZoom(f.properties.cluster_id);
+        map.easeTo({ center: f.geometry.coordinates, zoom });
+      });
+
+      map.on("click", "unclustered", (e) => {
+        const f = e.features && e.features[0];
+        if (!f) return;
+        const p = f.properties || {};
+        const title = p.label || p.kindLabel || "Stopover";
+        const sub = p.kindLabel || "";
+        const href = `/place/${p.source}/${p.id}`;
+        const html =
+          `<strong>${title}</strong>` +
+          (sub && sub !== title ? `<br>${sub}` : "") +
+          `<br><a href="${href}">View details →</a>`;
+        new maplibregl.Popup({ offset: 10 }).setLngLat(f.geometry.coordinates.slice()).setHTML(html).addTo(map);
+      });
+
+      for (const layer of ["clusters", "unclustered"]) {
+        map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+        map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
+      }
+    });
+  </script>
+</Base>

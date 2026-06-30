@@ -1,0 +1,29 @@
+{
+  "name": "poptop",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "UK motorhome/campervan stopover & refill directory",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro build && wrangler dev",
+    "deploy": "astro build && wrangler deploy",
+    "deploy:refresh": "wrangler deploy --config workers/refresh/wrangler.jsonc",
+    "db:create": "wrangler d1 create poptop-db",
+    "db:migrate:local": "wrangler d1 migrations apply poptop-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply poptop-db --remote",
+    "seed:fetch": "node scripts/seed.mjs",
+    "seed:local": "wrangler d1 execute poptop-db --local --file=scripts/seed-osm.sql",
+    "seed:remote": "wrangler d1 execute poptop-db --remote --file=scripts/seed-osm.sql"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
+    "astro": "^5.13.0",
+    "maplibre-gl": "^4.7.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.105.0"
+  }
+}

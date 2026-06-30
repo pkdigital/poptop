@@ -1,0 +1,61 @@
+---
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+export const prerender = false;
+const title = "Download the data | Poptop";
+const description = "Download the UK motorhome stopover & refill dataset as GPX (sat-nav), CSV or GeoJSON. Free and open.";
+
+const formats = [
+  { ext: "GPX", href: "/api/export/places.gpx", icon: "satellite",
+    desc: "Waypoints for sat-navs & GPS units (Garmin, etc.) and apps like OsmAnd." },
+  { ext: "CSV", href: "/api/export/places.csv", icon: "fileText",
+    desc: "Spreadsheet-friendly. Import into custom POI tools or your own apps." },
+  { ext: "GeoJSON", href: "/api/places.geojson", icon: "map",
+    desc: "For mapping tools & developers — the full point set with properties." },
+];
+---
+
+<Base title={title} description={description}>
+  <Fragment slot="head">
+    <style>
+      .dl { padding: 2.5rem 0; max-width: 760px; }
+      .dl h1 { margin: 0 0 0.4rem; }
+      .dl .lede { color: var(--muted); max-width: 60ch; }
+      .formats { list-style: none; padding: 0; margin: 1.75rem 0; display: grid; gap: 0.85rem; }
+      .fmt { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem; }
+      .fmt .ico { color: var(--brand); }
+      .fmt .body { flex: 1; }
+      .fmt .body strong { font-size: 1.05rem; }
+      .fmt .body p { margin: 0.15rem 0 0; font-size: 0.9rem; color: var(--muted); }
+      .note { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 1.25rem; margin-top: 1.5rem; }
+      @media (min-width: 560px) { .fmt { align-items: center; } }
+    </style>
+  </Fragment>
+
+  <div class="wrap dl">
+    <h1>Download the data</h1>
+    <p class="lede">
+      Take the whole UK dataset with you — handy when there's no signal at the stopover.
+      Free to use, no sign-up.
+    </p>
+
+    <ul class="formats">
+      {formats.map((f) => (
+        <li class="card fmt">
+          <span class="ico"><Icon name={f.icon} size="1.7rem" /></span>
+          <span class="body">
+            <strong>{f.ext}</strong>
+            <p>{f.desc}</p>
+          </span>
+          <a class="btn" href={f.href} download>Download</a>
+        </li>
+      ))}
+    </ul>
+
+    <p class="note">
+      Facility & site data is © <a href="https://www.openstreetmap.org/copyright" rel="nofollow">OpenStreetMap contributors</a>,
+      licensed under the <abbr title="Open Database License">ODbL</abbr>. Community stopovers © Poptop contributors.
+      Keep the attribution if you republish. An installable offline app (works with no signal) is on the roadmap.
+    </p>
+  </div>
+</Base>

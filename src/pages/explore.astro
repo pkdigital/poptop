@@ -1,0 +1,368 @@
+---
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+export const prerender = false;
+const title = "Explore the map — UK motorhome stopovers | Poptop";
+---
+
+<Base title={title}>
+  <Fragment slot="head">
+    <style>
+      main { padding: 0; }
+
+      /* Filter bar */
+      .filters { position: sticky; top: 64px; z-index: 12; background: rgba(255,255,255,0.94);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+      .filters .row { display: flex; gap: 0.6rem; align-items: center; padding: 0.7rem 1rem; flex-wrap: wrap; }
+
+      .search { position: relative; flex: 1 1 240px; min-width: 0; }
+      .search-ic { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+      .search input { padding-left: 2.4rem; height: 44px; border-radius: 999px; }
+      .suggest { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 25;
+        list-style: none; margin: 0; padding: 5px; background: #fff; border: 1px solid var(--line);
+        border-radius: 14px; box-shadow: var(--shadow); max-height: 320px; overflow: auto; }
+      .suggest[hidden] { display: none; }
+
+      .chips { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+      .chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.85rem; border-radius: 999px;
+        border: 1px solid var(--line); background: #fff; cursor: pointer; font: inherit; font-weight: 600; font-size: 0.9rem; white-space: nowrap; color: var(--ink); }
+      .chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+      .chip-locate { border-style: dashed; }
+
+      /* Split layout */
+      .explore { position: relative; }
+      .ex-list { padding: 1rem; }
+      .ex-count { font-weight: 700; margin: 0 0.25rem 0.75rem; }
+      .ex-grid { display: grid; gap: 0.9rem; grid-template-columns: 1fr; }
+
+      /* (Card + suggestion-item styles are global below — they're built in JS.) */
+
+      /* Mobile: list default, map toggled fullscreen */
+      .ex-map { position: fixed; inset: 64px 0 0 0; display: none; }
+      .explore.map-on .ex-map { display: block; }
+      .explore.map-on .ex-list { display: none; }
+      #map { width: 100%; height: 100%; }
+      .toggle { position: fixed; bottom: 1.1rem; left: 50%; transform: translateX(-50%); z-index: 30;
+        display: inline-flex; gap: 0.5rem; align-items: center; background: var(--ink); color: #fff; border: 0; cursor: pointer;
+        padding: 0.7rem 1.2rem; border-radius: 999px; font: inherit; font-weight: 700; box-shadow: var(--shadow-lg); }
+
+      @media (min-width: 900px) {
+        .toggle { display: none; }
+        .explore { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+        .ex-list { height: calc(100vh - 64px - 61px); overflow: auto; }
+        .ex-grid { grid-template-columns: 1fr 1fr; }
+        .ex-map { position: sticky; top: calc(64px + 61px); height: calc(100vh - 64px - 61px); display: block; }
+        .explore.map-on .ex-list { display: block; }
+      }
+    </style>
+
+    <!-- Global: these elements are created in JS (innerHTML), so scoped styles
+         won't reach them. -->
+    <style is:global>
+      .pcard { display: block; color: var(--ink); border-radius: var(--r); overflow: hidden;
+        background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+        transition: transform 0.08s, box-shadow 0.15s, border-color 0.15s; }
+      .pcard:hover { text-decoration: none; transform: translateY(-2px); box-shadow: var(--shadow); border-color: #bbb; }
+      .pcard .thumb { position: relative; height: 140px; display: grid; place-items: center; font-size: 2.4rem; color: #fff; overflow: hidden; }
+      .pcard .thumb > svg { position: relative; }
+      .pcard .thumb-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.35s; }
+      .pcard .skeleton { position: absolute; inset: 0; background: #ebebeb; overflow: hidden; }
+      .pcard .skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent); animation: poptop-shimmer 1.3s infinite; }
+      @keyframes poptop-shimmer { 100% { transform: translateX(100%); } }
+      .pcard .body { padding: 0.7rem 0.85rem 0.85rem; }
+      .pcard h3 { margin: 0; font-size: 1rem; }
+      .pcard .meta { color: var(--muted); font-size: 0.85rem; margin: 0.15rem 0 0; }
+      .pcard .badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+      .pcard .pill svg { vertical-align: -0.15em; }
+
+      .suggest li { padding: 0.55rem 0.7rem; border-radius: 9px; cursor: pointer; display: flex; gap: 0.5rem; align-items: center; }
+      .suggest li .ic { color: var(--muted); }
+      .suggest li:hover, .suggest li.active { background: var(--tint); }
+      .suggest .county { color: var(--muted); font-size: 0.85rem; }
+    </style>
+  </Fragment>
+
+  <div class="filters">
+    <div class="row">
+      <div class="search" id="search">
+        <span class="search-ic"><Icon name="search" size="1rem" /></span>
+        <input id="town-input" placeholder="Search a town" aria-label="Search a town" autocomplete="off" />
+        <ul class="suggest" id="suggest" hidden></ul>
+      </div>
+      <button class="chip chip-locate" id="locate" type="button"><Icon name="locate" size="1rem" /> Near me</button>
+      <div class="chips" id="chips">
+        <button class="chip" data-filter="stopover" aria-pressed="false"><Icon name="bed" size="1rem" /> Stopovers</button>
+        <button class="chip" data-filter="water" aria-pressed="false"><Icon name="droplet" size="1rem" /> Water</button>
+        <button class="chip" data-filter="waste" aria-pressed="false"><Icon name="recycle" size="1rem" /> Waste</button>
+        <button class="chip" data-filter="toilets" aria-pressed="false"><Icon name="toilet" size="1rem" /> Toilets</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="explore" id="explore">
+    <div class="ex-list" id="ex-list">
+      <p class="ex-count" id="count">Loading…</p>
+      <div class="ex-grid" id="grid"></div>
+    </div>
+    <div class="ex-map"><div id="map"></div></div>
+  </div>
+
+  <button class="toggle" id="toggle"></button>
+
+  <script>
+    // @ts-nocheck
+    import maplibregl from "maplibre-gl";
+    import "maplibre-gl/dist/maplibre-gl.css";
+    import { icons } from "../lib/icons.mjs";
+
+    const WATER = "#0369a1", WASTE = "#b45309", SITE = "#1f7a52", COMMUNITY = "#ff385c";
+    const visual = (p) => {
+      if (p.source === "community") return { c: COMMUNITY, ic: p.kind === "pub" ? icons.beer : icons.house };
+      if (p.kind === "drinking_water" || p.kind === "water_point") return { c: WATER, ic: icons.droplet };
+      if (p.kind === "dump_station") return { c: WASTE, ic: icons.recycle };
+      return { c: SITE, ic: icons.tent };
+    };
+    const badgesFor = (p) => {
+      const b = [];
+      if (p.water) b.push(icons.droplet + " Water");
+      if (p.waste) b.push(icons.recycle + " Waste");
+      if (p.toilets) b.push(icons.toilet + " Toilets");
+      return b;
+    };
+    const miles = (aLat, aLng, bLat, bLng) => {
+      const R = 3958.8, dLat = (bLat - aLat) * Math.PI / 180, dLng = (bLng - aLng) * Math.PI / 180;
+      const la1 = aLat * Math.PI / 180, la2 = bLat * Math.PI / 180;
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.asin(Math.sqrt(h));
+    };
+
+    // State lives in the URL query string — shareable, bookmarkable, and Back/forward
+    // restores it. (Scroll position stays in sessionStorage; it doesn't belong in a URL.)
+    const params = new URLSearchParams(location.search);
+    const pLat = parseFloat(params.get("lat")), pLng = parseFloat(params.get("lng")), pZ = parseFloat(params.get("z"));
+    const hasCenter = !Number.isNaN(pLat) && !Number.isNaN(pLng);
+    const SCROLL_KEY = "poptop.explore.scroll";
+    let savedScroll = null;
+    try { savedScroll = JSON.parse(sessionStorage.getItem(SCROLL_KEY) || "null"); } catch {}
+
+    const map = new maplibregl.Map({
+      container: "map",
+      style: "https://tiles.openfreemap.org/styles/positron",
+      center: hasCenter ? [pLng, pLat] : [-3.0, 54.5],
+      zoom: !Number.isNaN(pZ) ? pZ : 5,
+    });
+    map.addControl(new maplibregl.NavigationControl());
+    const geoCtl = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true });
+    map.addControl(geoCtl);
+
+    let ALL = [];
+    let userLoc = null;
+    let scrollTopNext = false;
+    let restoredScroll = false;
+    const active = new Set((params.get("f") || "").split(",").filter(Boolean));
+    const listEl = document.getElementById("ex-list");
+
+    // Reflect restored filters in the chips + restore search text.
+    for (const k of active) {
+      const btn = document.querySelector(`.chip[data-filter="${k}"]`);
+      if (btn) btn.setAttribute("aria-pressed", "true");
+    }
+    if (params.get("q")) { const ti = document.getElementById("town-input"); if (ti) ti.value = params.get("q"); }
+
+    // Write current map/filter/search state into the URL (no history spam).
+    function updateURL() {
+      const c = map.getCenter();
+      const p = new URLSearchParams();
+      p.set("lat", c.lat.toFixed(5));
+      p.set("lng", c.lng.toFixed(5));
+      p.set("z", map.getZoom().toFixed(2));
+      if (active.size) p.set("f", [...active].join(","));
+      const q = (document.getElementById("town-input")?.value || "").trim();
+      if (q) p.set("q", q);
+      history.replaceState(null, "", location.pathname + "?" + p.toString());
+    }
+    let scrollT;
+    listEl.addEventListener("scroll", () => {
+      clearTimeout(scrollT);
+      scrollT = setTimeout(() => { try { sessionStorage.setItem(SCROLL_KEY, JSON.stringify(listEl.scrollTop)); } catch {} }, 200);
+    }, { passive: true });
+
+    const passes = (p) => {
+      if (active.size === 0) return true;
+      return (active.has("stopover") && p.stopover) || (active.has("water") && p.water) ||
+        (active.has("waste") && p.waste) || (active.has("toilets") && p.toilets);
+    };
+    const filteredFC = () => ({ type: "FeatureCollection", features: ALL.filter((f) => passes(f.properties)) });
+
+    function refreshList() {
+      const c = map.getCenter();
+      const origin = userLoc || { lat: c.lat, lng: c.lng };
+      // Nearest matching places to the map centre (or the user). Not clipped to
+      // the viewport — so the list still populates when the map is hidden (mobile).
+      const matching = ALL.filter((f) => passes(f.properties));
+      matching.forEach((f) => { const [lng, lat] = f.geometry.coordinates; f._d = miles(origin.lat, origin.lng, lat, lng); });
+      matching.sort((a, b2) => a._d - b2._d);
+      const show = matching.slice(0, 60);
+
+      document.getElementById("count").textContent =
+        `${matching.length.toLocaleString()} place${matching.length === 1 ? "" : "s"} · showing nearest ${show.length}`;
+
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      for (const f of show) {
+        const p = f.properties, v = visual(p), [clng, clat] = f.geometry.coordinates;
+        const a = document.createElement("a");
+        a.className = "pcard";
+        a.href = `/place/${p.source}/${p.id}`;
+        const badges = badgesFor(p).map((x) => `<span class="pill">${x}</span>`).join("");
+        a.innerHTML =
+          `<div class="thumb" style="background:linear-gradient(135deg, ${v.c}, ${v.c}cc)">${v.ic}` +
+          `<img class="thumb-img" loading="lazy" alt="" src="/api/streetview?lat=${clat}&lng=${clng}" ` +
+          `onload="this.style.opacity=1;var s=this.nextElementSibling;if(s)s.remove()" ` +
+          `onerror="var s=this.nextElementSibling;if(s)s.remove();this.remove()">` +
+          `<span class="skeleton"></span></div>` +
+          `<div class="body"><h3>${p.label}</h3>` +
+          `<p class="meta">${p.kindLabel}${p.source === "community" ? " · Community" : ""} · ${f._d.toFixed(1)} mi</p>` +
+          (badges ? `<div class="badges">${badges}</div>` : ``) +
+          `</div>`;
+        grid.appendChild(a);
+      }
+
+      if (scrollTopNext) { listEl.scrollTop = 0; window.scrollTo(0, 0); scrollTopNext = false; }
+      else if (!restoredScroll && typeof savedScroll === "number") { listEl.scrollTop = savedScroll; }
+      restoredScroll = true;
+    }
+
+    map.on("load", async () => {
+      const data = await (await fetch("/api/places.geojson")).json();
+      ALL = data.features;
+      const isWater = ["in", ["get", "kind"], ["literal", ["drinking_water", "water_point"]]];
+      const isWaste = ["==", ["get", "kind"], "dump_station"];
+      map.addSource("places", { type: "geojson", data: filteredFC(), cluster: true, clusterRadius: 55, clusterMaxZoom: 12,
+        clusterProperties: { water: ["+", ["case", isWater, 1, 0]], waste: ["+", ["case", isWaste, 1, 0]] } });
+      const site = ["-", ["get", "point_count"], ["+", ["get", "water"], ["get", "waste"]]];
+      const w = ["get", "water"], d = ["get", "waste"];
+      map.addLayer({ id: "clusters", type: "circle", source: "places", filter: ["has", "point_count"],
+        paint: { "circle-color": ["case", ["all", [">=", d, w], [">=", d, site]], WASTE, ["all", [">=", w, d], [">=", w, site]], WATER, SITE],
+          "circle-radius": ["step", ["get", "point_count"], 16, 25, 22, 100, 30], "circle-stroke-width": 2, "circle-stroke-color": "#fff" } });
+      map.addLayer({ id: "cluster-count", type: "symbol", source: "places", filter: ["has", "point_count"],
+        layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Bold"], "text-size": 13 }, paint: { "text-color": "#fff" } });
+      map.addLayer({ id: "unclustered", type: "circle", source: "places", filter: ["!", ["has", "point_count"]],
+        paint: { "circle-color": ["case", ["==", ["get", "source"], "community"], COMMUNITY, isWater, WATER, isWaste, WASTE, SITE],
+          "circle-radius": 6, "circle-stroke-width": 2, "circle-stroke-color": "#fff" } });
+
+      map.on("click", "clusters", async (e) => {
+        const f = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
+        const zoom = await map.getSource("places").getClusterExpansionZoom(f.properties.cluster_id);
+        map.easeTo({ center: f.geometry.coordinates, zoom });
+      });
+      map.on("click", "unclustered", (e) => {
+        const f = e.features && e.features[0]; if (!f) return;
+        const p = f.properties;
+        new maplibregl.Popup({ offset: 10 }).setLngLat(f.geometry.coordinates.slice())
+          .setHTML(`<strong>${p.label}</strong><br>${p.kindLabel}<br><a href="/place/${p.source}/${p.id}">View details →</a>`).addTo(map);
+      });
+      for (const l of ["clusters", "unclustered"]) {
+        map.on("mouseenter", l, () => (map.getCanvas().style.cursor = "pointer"));
+        map.on("mouseleave", l, () => (map.getCanvas().style.cursor = ""));
+      }
+      refreshList();
+      map.on("moveend", () => { refreshList(); updateURL(); });
+    });
+
+    geoCtl.on("geolocate", (e) => { userLoc = { lat: e.coords.latitude, lng: e.coords.longitude }; });
+
+    // Filter chips
+    document.getElementById("chips").addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip"); if (!btn) return;
+      const key = btn.dataset.filter;
+      if (active.has(key)) { active.delete(key); btn.setAttribute("aria-pressed", "false"); }
+      else { active.add(key); btn.setAttribute("aria-pressed", "true"); }
+      const src = map.getSource("places");
+      if (src) src.setData(filteredFC());
+      scrollTopNext = true;
+      refreshList();
+      updateURL();
+    });
+
+    // Typeahead: geocode ANY UK place or postcode via postcodes.io (free, no key, CORS).
+    const input = document.getElementById("town-input");
+    const suggest = document.getElementById("suggest");
+    let matches = [];
+    let debounceT, reqSeq = 0;
+
+    function renderSuggest() {
+      if (!matches.length) { suggest.hidden = true; suggest.innerHTML = ""; return; }
+      suggest.innerHTML = matches.map((m, i) =>
+        `<li data-i="${i}"><span class="ic">${icons.mapPin}</span><span>${m.label}${m.sub ? ` <span class="county">${m.sub}</span>` : ""}</span></li>`
+      ).join("");
+      suggest.hidden = false;
+    }
+    async function fetchSuggest(q) {
+      q = q.trim();
+      if (q.length < 2) { matches = []; renderSuggest(); return; }
+      const seq = ++reqSeq;
+      const isPostcode = /\d/.test(q);
+      const url = isPostcode
+        ? `https://api.postcodes.io/postcodes?q=${encodeURIComponent(q)}&limit=8`
+        : `https://api.postcodes.io/places?q=${encodeURIComponent(q)}&limit=8`;
+      let result = [];
+      try { result = (await (await fetch(url)).json()).result || []; } catch { return; }
+      if (seq !== reqSeq) return; // superseded by a newer keystroke
+      matches = result.map((r) => isPostcode
+        ? { label: r.postcode, sub: r.admin_district || r.region || "", lat: r.latitude, lng: r.longitude }
+        : { label: r.name_1, sub: r.county_unitary || r.district_borough || r.region || r.country || "", lat: r.latitude, lng: r.longitude }
+      ).filter((m) => m.lat != null && m.lng != null);
+      renderSuggest();
+    }
+    function choose(m) {
+      if (!m) return;
+      input.value = m.label + (m.sub ? `, ${m.sub}` : "");
+      matches = []; suggest.hidden = true;
+      userLoc = null; scrollTopNext = true;
+      map.flyTo({ center: [m.lng, m.lat], zoom: 12 });
+    }
+
+    input.addEventListener("input", () => { clearTimeout(debounceT); debounceT = setTimeout(() => fetchSuggest(input.value), 220); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); choose(matches[0]); }
+      else if (e.key === "Escape") { suggest.hidden = true; }
+    });
+    suggest.addEventListener("mousedown", (e) => {
+      const li = e.target.closest("li"); if (!li) return;
+      e.preventDefault();
+      choose(matches[Number(li.dataset.i)]);
+    });
+    input.addEventListener("blur", () => setTimeout(() => (suggest.hidden = true), 150));
+
+    // Honour ?q= passed from the home search — geocode and centre once.
+    const initialQ = params.get("q");
+    if (initialQ && !hasCenter) {
+      input.value = initialQ;
+      (async () => {
+        const pc = /\d/.test(initialQ);
+        const u = pc
+          ? `https://api.postcodes.io/postcodes?q=${encodeURIComponent(initialQ)}&limit=1`
+          : `https://api.postcodes.io/places?q=${encodeURIComponent(initialQ)}&limit=1`;
+        try {
+          const r = (await (await fetch(u)).json()).result?.[0];
+          if (r) { userLoc = null; scrollTopNext = true; map.flyTo({ center: [r.longitude, r.latitude], zoom: 12 }); }
+        } catch {}
+      })();
+    }
+
+    document.getElementById("locate").addEventListener("click", () => { scrollTopNext = true; geoCtl.trigger(); });
+
+    // Mobile map/list toggle
+    const explore = document.getElementById("explore");
+    const toggle = document.getElementById("toggle");
+    const setToggle = (on) => { toggle.innerHTML = on ? `${icons.list} List` : `${icons.map} Map`; };
+    setToggle(false);
+    toggle.addEventListener("click", () => {
+      const on = explore.classList.toggle("map-on");
+      setToggle(on);
+      if (on) map.resize();
+    });
+  </script>
+</Base>

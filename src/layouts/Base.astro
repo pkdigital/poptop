@@ -1,0 +1,194 @@
+---
+import "@fontsource-variable/plus-jakarta-sans";
+import Icon from "../components/Icon.astro";
+
+const {
+  title,
+  description = "Find motorhome & campervan stopovers and refill points across the UK — pub stopovers, aires, sites, water and waste disposal. Free and community-driven.",
+  canonical = Astro.url.pathname,
+} = Astro.props;
+const canonicalUrl = new URL(canonical, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#ff385c" />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <slot name="head" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="/">
+          <span class="brand-mark"><Icon name="caravan" size="1.1rem" /></span>
+          <span class="brand-name">Poptop</span>
+        </a>
+        <nav class="site-nav">
+          <a href="/explore">Explore</a>
+          <a class="btn btn-sm" href="/add">Add a spot</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="foot-grid">
+          <div>
+            <a class="brand brand--foot" href="/">
+              <Icon name="caravan" size="1rem" /> Poptop
+            </a>
+            <p class="muted">
+              The UK's open directory of motorhome &amp; campervan stopovers and refill points.
+            </p>
+          </div>
+          <nav class="foot-links">
+            <a href="/">Map</a>
+            <a href="/add">Add a spot</a>
+            <a href="/download">Download data</a>
+            <a href="/sitemap.xml">Sitemap</a>
+          </nav>
+        </div>
+        <p class="muted fineprint">
+          Map &amp; facility data ©
+          <a href="https://www.openstreetmap.org/copyright" rel="nofollow">OpenStreetMap contributors</a>,
+          licensed under the ODbL. Community stopovers © Poptop contributors.
+        </p>
+      </div>
+    </footer>
+
+    <style is:global>
+      :root {
+        /* Airbnb-style: white + Rausch coral + neutral greys */
+        --brand: #ff385c;
+        --brand-dark: #d70466;
+        --tint: #f7f7f7;
+        --clay: #c2410c; /* community map points only */
+        --bg: #ffffff;
+        --bg-alt: #f7f7f7;
+        --card: #ffffff;
+        --ink: #222222;
+        --muted: #717171;
+        --line: #dddddd;
+        --ring: rgba(255, 56, 92, 0.25);
+
+        --r-sm: 10px;
+        --r: 14px;
+        --r-lg: 20px;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.05);
+        --shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.18);
+        --shadow-lg: 0 18px 48px -18px rgba(0, 0, 0, 0.28);
+        --maxw: 1100px;
+      }
+
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        font-family: "Plus Jakarta Sans Variable", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--ink);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1, h2, h3 { line-height: 1.18; letter-spacing: -0.02em; font-weight: 800; margin: 0 0 0.4em; }
+      h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+      h2 { font-size: clamp(1.3rem, 2.4vw, 1.7rem); }
+      p { margin: 0 0 1rem; }
+      a { color: var(--brand-dark); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      img { max-width: 100%; display: block; }
+
+      .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 1.25rem; }
+      .muted { color: var(--muted); }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex; align-items: center; gap: 0.5rem; justify-content: center;
+        background: var(--brand); color: #fff; border: 0; cursor: pointer;
+        font: inherit; font-weight: 700; text-decoration: none;
+        padding: 0.7rem 1.15rem; border-radius: var(--r-sm);
+        box-shadow: var(--shadow-sm); transition: background 0.15s, transform 0.05s;
+      }
+      .btn:hover { background: var(--brand-dark); text-decoration: none; }
+      .btn:active { transform: translateY(1px); }
+      .btn-sm { padding: 0.5rem 0.85rem; font-size: 0.92rem; }
+      .btn-accent { background: var(--clay); }
+      .btn-accent:hover { background: #9a3412; }
+      .btn-ghost {
+        background: #fff; color: var(--ink); border: 1px solid var(--line); box-shadow: none;
+      }
+      .btn-ghost:hover { background: var(--bg-alt); }
+
+      /* Cards & pills */
+      .card {
+        background: var(--card); border: 1px solid var(--line);
+        border-radius: var(--r); box-shadow: var(--shadow-sm);
+      }
+      .pill {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        font-size: 0.78rem; font-weight: 600;
+        background: var(--tint); color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 999px; padding: 0.18rem 0.62rem;
+      }
+      .pill .ic { font-size: 0.95em; color: var(--muted); }
+      .pill-clay { background: #fff0f3; color: var(--brand-dark); border-color: #ffd9e1; }
+
+      /* Icons */
+      .ic { display: inline-flex; align-items: center; justify-content: center; line-height: 0; vertical-align: -0.15em; }
+      .ic svg { display: block; }
+
+      /* Inputs */
+      input, select, textarea {
+        font: inherit; color: var(--ink);
+        padding: 0.7rem 0.85rem; border: 1px solid var(--line);
+        border-radius: var(--r-sm); background: #fff; width: 100%;
+      }
+      input:focus, select:focus, textarea:focus {
+        outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--ring);
+      }
+
+      /* Header */
+      .site-header {
+        position: sticky; top: 0; z-index: 20;
+        background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+      .brand { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 1.25rem; color: var(--ink); }
+      .brand:hover { text-decoration: none; }
+      .brand-mark {
+        display: inline-grid; place-items: center; width: 34px; height: 34px;
+        background: var(--brand); border-radius: 10px; color: #fff;
+      }
+      .site-nav { display: flex; align-items: center; gap: 1.1rem; }
+      .site-nav > a:not(.btn) { color: var(--ink); font-weight: 600; }
+
+      /* Footer */
+      .site-footer { margin-top: 3.5rem; border-top: 1px solid var(--line); background: var(--bg-alt); padding: 2.5rem 0 2rem; }
+      .foot-grid { display: flex; gap: 2rem; justify-content: space-between; flex-wrap: wrap; }
+      .foot-grid .muted { max-width: 36ch; }
+      .brand--foot { font-size: 1.1rem; margin-bottom: 0.4rem; }
+      .foot-links { display: flex; flex-direction: column; gap: 0.4rem; }
+      .fineprint { font-size: 0.8rem; margin-top: 1.75rem; }
+    </style>
+  </body>
+</html>

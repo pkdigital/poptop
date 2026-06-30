@@ -1,0 +1,204 @@
+---
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+export const prerender = false;
+const title = "Add a stopover | Poptop";
+const description = "Share a motorhome stopover, pub park-up or refill point with the Poptop community. Checked by AI moderation before going live.";
+---
+
+<Base title={title} description={description}>
+  <Fragment slot="head">
+    <style>
+      .add { padding: 2rem 0; max-width: 680px; }
+      .add h1 { margin: 0 0 0.3rem; }
+      .add .lede { color: var(--muted); margin: 0 0 1.5rem; }
+      .form { display: grid; gap: 1.1rem; }
+      .field label { display: block; font-weight: 700; margin-bottom: 0.35rem; }
+      .field .hint { font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+      #pickmap { height: 300px; border-radius: var(--r); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+      .pick-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
+      .coords { font-size: 0.85rem; color: var(--muted); }
+      .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+      .checks label { display: flex; align-items: center; gap: 0.5rem; font-weight: 500; }
+      .checks input { width: auto; }
+      .two { display: grid; gap: 1.1rem; }
+      .result { padding: 1.1rem 1.25rem; margin-top: 0.5rem; display: none; }
+      .result.show { display: block; }
+      .result.ok { border-color: #b9d9c6; background: var(--tint); }
+      .result.warn { border-color: #f1d4a8; background: #fdf6ea; }
+      .result.bad { border-color: #f0c2ad; background: #fbe9df; }
+      @media (min-width: 600px) { .two { grid-template-columns: 1fr 1fr; } .checks { grid-template-columns: repeat(4, 1fr); } }
+    </style>
+  </Fragment>
+
+  <div class="wrap add">
+    <h1>Add a stopover</h1>
+    <p class="lede">
+      Know a great pub park-up, driveway, aire or refill point? Add it here.
+      Every submission is checked by AI moderation before it goes live.
+    </p>
+
+    <form class="form" id="add-form">
+      <div class="field">
+        <label for="f-name">Name</label>
+        <input id="f-name" name="name" required maxlength="120" placeholder="e.g. The Red Lion, Burton" />
+      </div>
+
+      <div class="two">
+        <div class="field">
+          <label for="f-type">Type</label>
+          <select id="f-type" name="type" required>
+            <option value="pub">Pub stopover</option>
+            <option value="driveway">Private driveway</option>
+            <option value="aire">Aire</option>
+            <option value="site">Site</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-contact">Contact <span class="hint">(optional)</span></label>
+          <input id="f-contact" name="contact" maxlength="200" placeholder="Phone or website" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Location <span class="hint">— tap the map to drop a pin</span></label>
+        <div id="pickmap"></div>
+        <div class="pick-row">
+          <button type="button" class="btn-ghost btn btn-sm" id="locate"><Icon name="locate" size="1rem" /> Use my location</button>
+          <span class="coords" id="coords">No pin set</span>
+        </div>
+        <input type="hidden" name="lat" id="f-lat" />
+        <input type="hidden" name="lng" id="f-lng" />
+      </div>
+
+      <div class="field">
+        <label>Facilities</label>
+        <div class="checks">
+          <label><input type="checkbox" name="water" /> <Icon name="droplet" size="1rem" /> Water</label>
+          <label><input type="checkbox" name="waste" /> <Icon name="recycle" size="1rem" /> Waste</label>
+          <label><input type="checkbox" name="toilets" /> <Icon name="toilet" size="1rem" /> Toilets</label>
+          <label><input type="checkbox" name="electric" /> <Icon name="zap" size="1rem" /> Electric</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-desc">Description <span class="hint">(optional)</span></label>
+        <textarea id="f-desc" name="description" rows="3" maxlength="2000" placeholder="What's it like? Access, height limits, cost, how to ask permission…"></textarea>
+      </div>
+
+      <div class="two">
+        <div class="field">
+          <label for="f-w3w">what3words <span class="hint">(optional)</span></label>
+          <input id="f-w3w" name="w3w" placeholder="filled.count.soap" />
+        </div>
+        <div class="field">
+          <label for="f-by">Your name <span class="hint">(optional)</span></label>
+          <input id="f-by" name="submitter" maxlength="120" placeholder="Shown as the contributor" />
+        </div>
+      </div>
+
+      <button class="btn" type="submit" id="submit">Submit stopover</button>
+      <div class="result card" id="result"></div>
+    </form>
+  </div>
+
+  <script>
+    // @ts-nocheck
+    import maplibregl from "maplibre-gl";
+    import "maplibre-gl/dist/maplibre-gl.css";
+
+    const map = new maplibregl.Map({
+      container: "pickmap",
+      style: "https://tiles.openfreemap.org/styles/positron",
+      center: [-3.0, 54.0],
+      zoom: 5,
+    });
+    map.addControl(new maplibregl.NavigationControl());
+
+    let marker = null;
+    const latIn = document.getElementById("f-lat");
+    const lngIn = document.getElementById("f-lng");
+    const coords = document.getElementById("coords");
+
+    function setPin(lng, lat) {
+      latIn.value = lat.toFixed(6);
+      lngIn.value = lng.toFixed(6);
+      coords.textContent = `Pin: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      if (marker) marker.setLngLat([lng, lat]);
+      else marker = new maplibregl.Marker({ color: "#c2410c", draggable: true }).setLngLat([lng, lat]).addTo(map);
+      marker.on("dragend", () => {
+        const p = marker.getLngLat();
+        setPin(p.lng, p.lat);
+      });
+    }
+
+    map.on("click", (e) => setPin(e.lngLat.lng, e.lngLat.lat));
+
+    document.getElementById("locate").addEventListener("click", () => {
+      navigator.geolocation?.getCurrentPosition((pos) => {
+        const { latitude, longitude } = pos.coords;
+        map.flyTo({ center: [longitude, latitude], zoom: 14 });
+        setPin(longitude, latitude);
+      });
+    });
+
+    const form = document.getElementById("add-form");
+    const result = document.getElementById("result");
+    const submitBtn = document.getElementById("submit");
+
+    function show(cls, html) {
+      result.className = `result card show ${cls}`;
+      result.innerHTML = html;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!latIn.value) { show("warn", "Please drop a pin on the map first."); return; }
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Checking…";
+
+      const fd = new FormData(form);
+      const payload = {
+        name: fd.get("name"),
+        type: fd.get("type"),
+        contact: fd.get("contact"),
+        description: fd.get("description"),
+        w3w: fd.get("w3w"),
+        submitter: fd.get("submitter"),
+        lat: Number(latIn.value),
+        lng: Number(lngIn.value),
+        facilities: {
+          water: fd.get("water") === "on",
+          waste: fd.get("waste") === "on",
+          toilets: fd.get("toilets") === "on",
+          electric: fd.get("electric") === "on",
+        },
+      };
+
+      try {
+        const res = await fetch("/api/listings", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) { show("bad", data.error || "Something went wrong."); }
+        else if (data.status === "approved") {
+          show("ok", `Thanks! Your stopover is live. <a href="/place/community/${data.id}">View it →</a>`);
+          form.reset();
+        } else if (data.status === "rejected") {
+          show("bad", `This couldn't be accepted automatically. ${data.reason || ""}`);
+        } else {
+          show("warn", "Thanks! Your stopover is pending a quick review and will appear shortly.");
+          form.reset();
+        }
+      } catch {
+        show("bad", "Network error — please try again.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit stopover";
+      }
+    });
+  </script>
+</Base>

@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "poptop",
+  "main": "./dist/_worker.js/index.js",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // Built by `astro build` (the @astrojs/cloudflare adapter emits ./dist).
+  "assets": { "directory": "./dist", "binding": "ASSETS" },
+
+  // Workers AI — submission moderation (usage-billed, small free daily allowance).
+  "ai": { "binding": "AI" },
+
+  // database_id from `npm run db:create`. The cron lives in workers/refresh.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "poptop-db",
+      "database_id": "REPLACE_WITH_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

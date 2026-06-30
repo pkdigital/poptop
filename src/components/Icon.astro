@@ -1,0 +1,6 @@
+---
+import { icons } from "../lib/icons.mjs";
+const { name, size = "1.15em", class: cls = "" } = Astro.props;
+const svg = icons[name] || "";
+---
+<span class={`ic ${cls}`} style={`font-size:${size}`} set:html={svg}></span>
