@@ -10,7 +10,7 @@ export async function GET({ locals }) {
     n: 61, s: 49.5, e: 2.2, w: -9, limit: 40000,
   });
 
-  const STOPOVER = new Set(["caravan_site", "camp_site", "aire", "pub", "driveway", "site", "other"]);
+  const STOPOVER = new Set(["caravan_site", "camp_site", "aire", "pub", "driveway", "site", "motorhome_parking", "other"]);
 
   // Cached website preview images, keyed by "source/id".
   const og = await locals.runtime.env.DB.prepare(

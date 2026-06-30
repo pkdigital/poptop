@@ -16,26 +16,33 @@ export const OVERPASS_ENDPOINTS = [
 // One query for the whole UK: facilities + formal sites/aires.
 // `out center tags` returns a representative lat/lon even for ways/relations.
 export const OVERPASS_QUERY = `
-[out:json][timeout:180];
+[out:json][timeout:240];
 area["ISO3166-1"="GB"][admin_level=2]->.uk;
 (
   nwr["tourism"="caravan_site"](area.uk);
   nwr["tourism"="camp_site"](area.uk);
+  nwr["tourism"="camp_pitch"](area.uk);
   nwr["amenity"="sanitary_dump_station"](area.uk);
   nwr["sanitary_dump_station"](area.uk);
   nwr["amenity"="drinking_water"](area.uk);
   nwr["amenity"="water_point"](area.uk);
+  nwr["amenity"="parking"]["motorhome"="yes"](area.uk);
+  nwr["amenity"="parking"]["caravan"="yes"](area.uk);
+  nwr["amenity"="fuel"]["fuel:lpg"="yes"](area.uk);
 );
 out center tags;
 `.trim();
 
 function categoryOf(tags) {
   if (tags.tourism === "caravan_site") return "caravan_site";
-  if (tags.tourism === "camp_site") return "camp_site";
+  if (tags.tourism === "camp_site" || tags.tourism === "camp_pitch") return "camp_site";
   if (tags.amenity === "sanitary_dump_station" || tags.sanitary_dump_station)
     return "dump_station";
   if (tags.amenity === "drinking_water") return "drinking_water";
   if (tags.amenity === "water_point") return "water_point";
+  if (tags.amenity === "parking") return "motorhome_parking";
+  if (tags.amenity === "fuel") return "lpg";
+  if (tags.amenity === "toilets") return "toilets";
   return "other";
 }
 
@@ -60,7 +67,7 @@ export function normaliseElement(el) {
     has_water: isWaterCat || truthy(tags.drinking_water) ? 1 : 0,
     has_dump:
       category === "dump_station" || truthy(tags.sanitary_dump_station) ? 1 : 0,
-    has_toilets: truthy(tags.toilets) ? 1 : 0,
+    has_toilets: category === "toilets" || truthy(tags.toilets) ? 1 : 0,
     fee: tags.fee ?? null,
     tags: JSON.stringify(tags),
     updated_at: new Date().toISOString(),
@@ -86,6 +93,8 @@ async function tryEndpoint(endpoint, fetchImpl) {
       "User-Agent": "poptop/0.1 (UK motorhome stopover directory)",
     },
     body: "data=" + encodeURIComponent(OVERPASS_QUERY),
+    // Fail fast if a mirror hangs, so we move on to the next one.
+    signal: AbortSignal.timeout(120000),
   });
   const text = await res.text();
   // Overpass signals "too busy"/runtime errors as HTML or a `remark`, often

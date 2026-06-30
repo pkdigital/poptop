@@ -18,6 +18,7 @@
     "seed:remote": "wrangler d1 execute poptop-db --remote --file=scripts/seed-osm.sql"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.107.0",
     "@astrojs/cloudflare": "^12.6.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "astro": "^5.13.0",

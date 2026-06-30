@@ -3,9 +3,12 @@
 export const KIND_LABELS = {
   caravan_site: "Caravan site",
   camp_site: "Campsite",
-  dump_station: "Toilet / waste disposal",
+  dump_station: "Waste / Elsan disposal",
   drinking_water: "Drinking water",
   water_point: "Water point",
+  motorhome_parking: "Motorhome parking",
+  lpg: "LPG / autogas",
+  toilets: "Public toilets",
   pub: "Pub stopover",
   driveway: "Private driveway",
   aire: "Aire",

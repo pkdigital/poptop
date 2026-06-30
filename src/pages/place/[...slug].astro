@@ -40,8 +40,11 @@ const openingHours = tags.opening_hours;
 const operator = tags.operator;
 const badges = facilityBadges(place);
 
-// Website preview image (cached, validated). Priority: og:image -> Mapillary.
-const ogImg = website ? await getOrFetchOg(env.DB, ref, website) : null;
+// Website preview (cached): image (validated) + title/description.
+const og = website ? await getOrFetchOg(env.DB, ref, website) : null;
+const ogImg = og?.image || null;
+const ai = await env.DB.prepare("SELECT ai_desc FROM place_geo WHERE place_ref = ?").bind(ref).first();
+const aboutText = place.description || ai?.ai_desc || og?.desc || null;
 const streetview = `/api/streetview?lat=${place.lat}&lng=${place.lng}`;
 const heroPrimary = ogImg || streetview;
 const heroFb = ogImg ? streetview : "";
@@ -157,7 +160,7 @@ const jsonLd = {
       </ul>
     </div>
 
-    {place.description && <><h2>About</h2><p>{place.description}</p></>}
+    {aboutText && <><h2>About</h2><p>{aboutText}</p></>}
 
     <h2>Reviews &amp; comments</h2>
     {reviews.length === 0 ? (

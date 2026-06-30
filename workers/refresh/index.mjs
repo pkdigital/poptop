@@ -1,21 +1,35 @@
-// Ingest worker: monthly OSM refresh only. Kept separate from the Astro app
-// (which serves all request traffic) so ingest and serving scale independently.
+// Ingest worker: monthly OSM refresh + frequent og:image/description top-up.
 // Both bind the same poptop-db D1.
 
 import { refreshOsm } from "../../src/lib/refresh.mjs";
+import { resolveOgBatch } from "../../src/lib/ogimage.mjs";
+
+const MONTHLY_OSM = "0 4 1 * *";
 
 export default {
-  async scheduled(_event, env, ctx) {
-    ctx.waitUntil(
-      refreshOsm(env.DB).then((n) => console.log(`Refreshed ${n} OSM places`))
-    );
+  async scheduled(event, env, ctx) {
+    if (event.cron === MONTHLY_OSM) {
+      ctx.waitUntil(
+        refreshOsm(env.DB).then((n) => console.log(`Refreshed ${n} OSM places`))
+      );
+    } else {
+      // Hourly: chew through un-resolved website og:images/descriptions.
+      ctx.waitUntil(
+        resolveOgBatch(env.DB, 20).then((r) =>
+          console.log(`og batch: ${r.withImage}/${r.processed} with image`)
+        )
+      );
+    }
   },
 
-  // Manual trigger for testing: POST /refresh
+  // Manual triggers for testing: POST /refresh or POST /og
   async fetch(request, env) {
-    if (request.method === "POST" && new URL(request.url).pathname === "/refresh") {
-      const n = await refreshOsm(env.DB);
-      return Response.json({ refreshed: n });
+    const { pathname } = new URL(request.url);
+    if (request.method === "POST" && pathname === "/refresh") {
+      return Response.json({ refreshed: await refreshOsm(env.DB) });
+    }
+    if (request.method === "POST" && pathname === "/og") {
+      return Response.json(await resolveOgBatch(env.DB, 20));
     }
     return new Response("poptop-refresh worker", { status: 200 });
   },

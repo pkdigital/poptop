@@ -135,6 +135,9 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
       if (p.source === "community") return { c: COMMUNITY, ic: p.kind === "pub" ? icons.beer : icons.house };
       if (p.kind === "drinking_water" || p.kind === "water_point") return { c: WATER, ic: icons.droplet };
       if (p.kind === "dump_station") return { c: WASTE, ic: icons.recycle };
+      if (p.kind === "toilets") return { c: "#0891b2", ic: icons.toilet };
+      if (p.kind === "lpg") return { c: "#7c3aed", ic: icons.zap };
+      if (p.kind === "motorhome_parking") return { c: SITE, ic: icons.caravan };
       return { c: SITE, ic: icons.tent };
     };
     const badgesFor = (p) => {
