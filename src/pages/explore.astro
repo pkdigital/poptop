@@ -48,12 +48,13 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
 
       @media (min-width: 900px) {
         .toggle { display: none; }
-        .explore { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
-        .ex-list { height: calc(100vh - 64px - 61px); overflow: auto; }
+        /* Page scrolls as one (single scrollbar); the map stays pinned beside the
+           scrolling list, and the global footer follows naturally below. */
+        .explore { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: start; }
         .ex-grid { grid-template-columns: 1fr 1fr; }
-        .ex-map { position: sticky; top: calc(64px + 61px); height: calc(100vh - 64px - 61px); display: block; padding: 1rem 1rem 1rem 0; }
+        .ex-map { position: sticky; top: calc(64px + 61px); height: calc(100vh - 64px - 61px);
+          display: block; align-self: start; padding: 1rem 1rem 1rem 0; }
         #map { border-radius: var(--r-lg); }
-        .explore.map-on .ex-list { display: block; }
       }
     </style>
 
@@ -79,11 +80,6 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
       .suggest li .ic { color: var(--muted); }
       .suggest li:hover, .suggest li.active { background: var(--tint); }
       .suggest .county { color: var(--muted); font-size: 0.85rem; }
-
-      /* App-view: hide the global footer so the page is exactly one viewport tall
-         (the list pane scrolls internally) — avoids a second window scrollbar. */
-      .site-footer { display: none; }
-      @media (min-width: 900px) { body { overflow: hidden; } }
 
       /* Rich, animated map popup — mirrors the result card. */
       .place-popup .maplibregl-popup-content { padding: 0; border-radius: 16px; overflow: hidden;
