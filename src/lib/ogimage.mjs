@@ -42,16 +42,17 @@ export async function resolveOg(website) {
     const html = (await res.text()).slice(0, 250000);
 
     let img = metaContent(html, ["og:image:secure_url", "og:image:url", "og:image", "twitter:image", "twitter:image:src"]);
-    if (!img) {
-      const link = html.match(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]*>/i)?.[0];
-      img = link?.match(/href=["']([^"']+)["']/i)?.[1] || null;
-    }
+    // (No apple-touch-icon fallback — that's an app icon/logo, not a photo.)
+    img = img ? absUrl(res.url, img) : null;
+    // Skip URLs that look like a logo/graphic rather than a photo.
+    if (img && /logo|favicon|sprite|placeholder|apple-touch|[-_/]icon/i.test(img)) img = null;
+
     let title = metaContent(html, ["og:title", "twitter:title"]);
     if (!title) title = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || null;
     const desc = metaContent(html, ["og:description", "twitter:description", "description"]);
 
     return {
-      image: img ? absUrl(res.url, img) : null,
+      image: img,
       title: clean(title, 200),
       desc: clean(desc, 600),
     };
