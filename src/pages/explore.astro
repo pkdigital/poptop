@@ -221,9 +221,12 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
     };
     const filteredFC = () => ({ type: "FeatureCollection", features: ALL.filter((f) => passes(f.properties)) });
 
-    function refreshList() {
+    function refreshList(originOverride) {
+      if (!ALL.length) return; // data not loaded yet; map "load" will call us
       const c = map.getCenter();
-      const origin = userLoc || { lat: c.lat, lng: c.lng };
+      // originOverride lets a new search/location update the list instantly,
+      // without waiting for the map's fly animation to finish (moveend).
+      const origin = originOverride || userLoc || { lat: c.lat, lng: c.lng };
       // Nearest matching places to the map centre (or the user). Not clipped to
       // the viewport — so the list still populates when the map is hidden (mobile).
       const matching = ALL.filter((f) => passes(f.properties));
@@ -330,7 +333,7 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
       map.on("moveend", () => { refreshList(); updateURL(); });
     });
 
-    geoCtl.on("geolocate", (e) => { userLoc = { lat: e.coords.latitude, lng: e.coords.longitude }; });
+    geoCtl.on("geolocate", (e) => { userLoc = { lat: e.coords.latitude, lng: e.coords.longitude }; refreshList(userLoc); });
 
     // Filter chips
     document.getElementById("chips").addEventListener("click", (e) => {
@@ -380,6 +383,7 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
       input.value = m.label + (m.sub ? `, ${m.sub}` : "");
       matches = []; suggest.hidden = true;
       userLoc = null; scrollTopNext = true;
+      refreshList({ lat: m.lat, lng: m.lng }); // update tiles now, don't wait for the map
       map.flyTo({ center: [m.lng, m.lat], zoom: 12 });
     }
 
@@ -406,7 +410,7 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
           : `https://api.postcodes.io/places?q=${encodeURIComponent(initialQ)}&limit=1`;
         try {
           const r = (await (await fetch(u)).json()).result?.[0];
-          if (r) { userLoc = null; scrollTopNext = true; map.flyTo({ center: [r.longitude, r.latitude], zoom: 12 }); }
+          if (r) { userLoc = null; scrollTopNext = true; refreshList({ lat: r.latitude, lng: r.longitude }); map.flyTo({ center: [r.longitude, r.latitude], zoom: 12 }); }
         } catch {}
       })();
     }
