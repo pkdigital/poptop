@@ -109,7 +109,6 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
         <button class="chip" data-filter="stopover" aria-pressed="false"><Icon name="bed" size="1rem" /> Stopovers</button>
         <button class="chip" data-filter="water" aria-pressed="false"><Icon name="droplet" size="1rem" /> Water</button>
         <button class="chip" data-filter="waste" aria-pressed="false"><Icon name="recycle" size="1rem" /> Waste</button>
-        <button class="chip" data-filter="toilets" aria-pressed="false"><Icon name="toilet" size="1rem" /> Toilets</button>
       </div>
     </div>
   </div>
@@ -217,7 +216,7 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
     const passes = (p) => {
       if (active.size === 0) return true;
       return (active.has("stopover") && p.stopover) || (active.has("water") && p.water) ||
-        (active.has("waste") && p.waste) || (active.has("toilets") && p.toilets);
+        (active.has("waste") && p.waste);
     };
     const filteredFC = () => ({ type: "FeatureCollection", features: ALL.filter((f) => passes(f.properties)) });
 
