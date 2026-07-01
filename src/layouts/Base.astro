@@ -8,6 +8,7 @@ const {
   canonical = Astro.url.pathname,
 } = Astro.props;
 const canonicalUrl = new URL(canonical, Astro.site).href;
+const user = Astro.locals.user;
 ---
 
 <!doctype html>
@@ -38,6 +39,17 @@ const canonicalUrl = new URL(canonical, Astro.site).href;
         <nav class="site-nav">
           <a href="/explore">Explore</a>
           <a class="btn btn-sm" href="/add">Add a spot</a>
+          {user ? (
+            <details class="acct">
+              <summary class="acct-btn">{(user.name || user.email || "Account").split(" ")[0]}</summary>
+              <div class="acct-menu">
+                <a href="/account">Your account</a>
+                <button type="button" data-signout>Sign out</button>
+              </div>
+            </details>
+          ) : (
+            <button type="button" class="btn btn-sm btn-ghost" id="signin" data-provider="google">Sign in</button>
+          )}
         </nav>
       </div>
     </header>
@@ -182,6 +194,21 @@ const canonicalUrl = new URL(canonical, Astro.site).href;
       }
       .site-nav { display: flex; align-items: center; gap: 1.1rem; }
       .site-nav > a:not(.btn) { color: var(--ink); font-weight: 600; }
+      .btn-ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+      .btn-ghost:hover { background: var(--bg-alt); color: var(--ink); }
+
+      /* Account menu */
+      .acct { position: relative; }
+      .acct > summary { list-style: none; cursor: pointer; font-weight: 700; color: var(--ink);
+        padding: 0.35rem 0.7rem; border: 1px solid var(--line); border-radius: 999px; }
+      .acct > summary::-webkit-details-marker { display: none; }
+      .acct[open] > summary { background: var(--bg-alt); }
+      .acct-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 160px; z-index: 30;
+        background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+        padding: 5px; display: flex; flex-direction: column; }
+      .acct-menu a, .acct-menu button { text-align: left; padding: 0.5rem 0.7rem; border-radius: 8px;
+        background: none; border: 0; font: inherit; color: var(--ink); cursor: pointer; }
+      .acct-menu a:hover, .acct-menu button:hover { background: var(--bg-alt); text-decoration: none; }
 
       /* Footer */
       .site-footer { margin-top: 3.5rem; border-top: 1px solid var(--line); background: var(--bg-alt); padding: 2.5rem 0 2rem; }
@@ -192,5 +219,18 @@ const canonicalUrl = new URL(canonical, Astro.site).href;
       .foot-links { display: flex; flex-direction: column; gap: 0.4rem; }
       .fineprint { font-size: 0.8rem; margin-top: 1.75rem; }
     </style>
+
+    <script>
+      // @ts-nocheck — header auth actions (Better Auth browser client).
+      import { createAuthClient } from "better-auth/client";
+      const auth = createAuthClient(); // talks to /api/auth on this origin
+      const signin = document.getElementById("signin");
+      if (signin) signin.addEventListener("click", () =>
+        auth.signIn.social({ provider: signin.dataset.provider || "google", callbackURL: location.pathname + location.search })
+      );
+      document.querySelectorAll("[data-signout]").forEach((b) =>
+        b.addEventListener("click", async () => { await auth.signOut(); location.href = "/"; })
+      );
+    </script>
   </body>
 </html>

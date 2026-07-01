@@ -1,0 +1,25 @@
+---
+import Base from "../layouts/Base.astro";
+export const prerender = false;
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect("/");
+const title = "Your account | Poptop";
+---
+
+<Base title={title}>
+  <div class="wrap" style="max-width: 640px; padding: 2rem 0;">
+    <h1>Your account</h1>
+    <p class="muted">You're signed in{user.name ? `, ${user.name.split(" ")[0]}` : ""}.</p>
+
+    <div class="card" style="padding: 1.1rem 1.25rem; margin-top: 1.25rem; display: grid; gap: 0.5rem;">
+      <div><strong>Name</strong><br />{user.name || "—"}</div>
+      <div><strong>Email</strong><br />{user.email}</div>
+    </div>
+
+    <p style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+      <a class="btn" href="/add">Add a stopover</a>
+      <button type="button" class="btn btn-ghost btn-sm" data-signout>Sign out</button>
+    </p>
+  </div>
+</Base>
