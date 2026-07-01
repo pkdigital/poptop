@@ -16,7 +16,10 @@ const data = await queryPlaces(Astro.locals.runtime.env.DB, {
   n: t.lat + d, s: t.lat - d, e: t.lng + d, w: t.lng - d, limit: 250,
 });
 
+// Drop residential/static "park home" estates and closed sites — not stopovers.
+const EXCLUDE_TYPE = new Set(["residential_park", "closed"]);
 const places = [...data.community, ...data.osm]
+  .filter((p: any) => !EXCLUDE_TYPE.has(p.site_type))
   .map((p: any) => ({ ...p, miles: distanceMiles(t.lat, t.lng, p.lat, p.lng) }))
   .sort((a: any, b: any) => a.miles - b.miles);
 

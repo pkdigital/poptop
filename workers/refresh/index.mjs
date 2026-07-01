@@ -15,7 +15,7 @@ export default {
     } else {
       // Hourly: chew through un-resolved website og:images/descriptions.
       ctx.waitUntil(
-        resolveOgBatch(env.DB, 20).then((r) =>
+        resolveOgBatch(env, 20).then((r) =>
           console.log(`og batch: ${r.withImage}/${r.processed} with image`)
         )
       );
@@ -29,7 +29,7 @@ export default {
       return Response.json({ refreshed: await refreshOsm(env.DB) });
     }
     if (request.method === "POST" && pathname === "/og") {
-      return Response.json(await resolveOgBatch(env.DB, 20));
+      return Response.json(await resolveOgBatch(env, 20));
     }
     return new Response("poptop-refresh worker", { status: 200 });
   },

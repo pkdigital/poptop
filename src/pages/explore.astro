@@ -212,6 +212,8 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
       scrollT = setTimeout(() => { try { sessionStorage.setItem(SCROLL_KEY, JSON.stringify(listEl.scrollTop)); } catch {} }, 200);
     }, { passive: true });
 
+    // Category chips OR among themselves (the geojson already hides no-photo
+    // stopovers and non-campsites, so there's no photo filter here).
     const passes = (p) => {
       if (active.size === 0) return true;
       return (active.has("stopover") && p.stopover) || (active.has("water") && p.water) ||
@@ -256,7 +258,7 @@ const title = "Explore the map — UK motorhome stopovers | Poptop";
     }
 
     map.on("load", async () => {
-      const data = await (await fetch("/api/places.geojson")).json();
+      const data = await (await fetch("/api/places.geojson?v=3")).json();
       ALL = data.features;
       const isWater = ["in", ["get", "kind"], ["literal", ["drinking_water", "water_point"]]];
       const isWaste = ["==", ["get", "kind"], "dump_station"];

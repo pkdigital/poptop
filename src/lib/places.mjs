@@ -34,10 +34,12 @@ export async function queryPlaces(DB, { n, s, e, w, category = null, type = null
   limit = Math.min(Number(limit) || 500, 50000);
 
   const osmSql =
-    `SELECT 'osm' AS source, osm_id AS id, name, category AS kind, lat, lng,` +
-    ` has_water, has_dump, has_toilets, fee FROM osm_places` +
-    ` WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?` +
-    (category ? ` AND category = ?` : ``) +
+    `SELECT 'osm' AS source, o.osm_id AS id, o.name, o.category AS kind, o.lat, o.lng,` +
+    ` o.has_water, o.has_dump, o.has_toilets, o.fee,` +
+    ` g.og_image AS og_image, g.site_type AS site_type FROM osm_places o` +
+    ` LEFT JOIN place_geo g ON g.place_ref = 'osm/' || o.osm_id` +
+    ` WHERE o.lat BETWEEN ? AND ? AND o.lng BETWEEN ? AND ?` +
+    (category ? ` AND o.category = ?` : ``) +
     ` LIMIT ?`;
   const osmBind = [s, n, w, e, ...(category ? [category] : []), limit];
 

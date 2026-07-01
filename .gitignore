@@ -6,3 +6,8 @@ dist/
 .dev.vars.*
 *.log
 .DS_Store
+
+# Generated contact/target lists & one-off data dumps (contain contact data)
+campsite-contacts.csv
+companies-house-campsites.csv
+scripts/dedup.sql

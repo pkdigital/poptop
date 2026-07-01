@@ -12,7 +12,7 @@ export async function POST({ url, request, locals }) {
   }
 
   const limit = Math.min(Number(new URL(url).searchParams.get("limit")) || 15, 20);
-  const { processed, withImage } = await resolveOgBatch(env.DB, limit);
+  const { processed, withImage } = await resolveOgBatch(env, limit);
 
   const rem = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM osm_places o LEFT JOIN place_geo g ON g.place_ref = 'osm/' || o.osm_id` +

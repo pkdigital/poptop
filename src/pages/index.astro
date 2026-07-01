@@ -98,7 +98,7 @@ const title = "Poptop — UK motorhome & campervan stopovers and refill points";
         </div>
         <button class="btn" type="submit">Search</button>
       </form>
-      <p class="hero-stats"><strong>11,800+</strong> places mapped · free forever</p>
+      <p class="hero-stats"><strong>4,000+</strong> campsites &amp; refill points · free forever</p>
     </div>
   </section>
 
@@ -178,7 +178,7 @@ const title = "Poptop — UK motorhome & campervan stopovers and refill points";
     );
 
     map.on("load", async () => {
-      const res = await fetch("/api/places.geojson");
+      const res = await fetch("/api/places.geojson?v=3");
       if (!res.ok) return;
       const data = await res.json();
 

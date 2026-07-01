@@ -10,7 +10,8 @@ import { readdirSync, writeFileSync } from "node:fs";
 const COLS = [
   "place_ref", "postcode", "district", "region", "w3w",
   "og_image", "og_status", "og_checked", "og_title", "og_desc",
-  "ai_title", "ai_desc", "ai_checked", "cached_at",
+  "ai_title", "ai_desc", "ai_checked",
+  "site_type", "site_checked", "cached_at",
 ];
 
 const dir = ".wrangler/state/v3/d1/miniflare-D1DatabaseObject";

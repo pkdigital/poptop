@@ -48,12 +48,24 @@ function categoryOf(tags) {
 
 const truthy = (v) => v === "yes" || v === "customers" || v === "permissive";
 
+// tourism=caravan_site conflates tourist sites with permanent residential /
+// static "park home" estates — which are not stopovers. Drop those: OSM's
+// permanent/static tags when present, else obvious residential naming.
+const RESIDENTIAL_RX = /\b(mobile[- ]homes?|park[- ]homes?|residential|retirement)\b/i;
+export function isResidentialPark(tags) {
+  if (tags.tourism !== "caravan_site") return false;
+  if (tags.permanent_camping === "only") return true;
+  if (tags.static_caravans === "only") return true;
+  return RESIDENTIAL_RX.test(tags.name || "");
+}
+
 // Turn one raw Overpass element into a normalised place row, or null to skip.
 export function normaliseElement(el) {
   const tags = el.tags || {};
   const lat = el.lat ?? el.center?.lat;
   const lng = el.lon ?? el.center?.lon;
   if (lat == null || lng == null) return null;
+  if (isResidentialPark(tags)) return null; // residential/static park, not a stopover
 
   const category = categoryOf(tags);
   const isWaterCat = category === "drinking_water" || category === "water_point";
